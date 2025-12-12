@@ -159,7 +159,7 @@ Contributions are welcome! Please:
 
 ## Acknowledgments
 
-This plugin uses [ccusage](https://github.com/ryoppippi/ccusage) by Ryotaro Kimura ([@ryoppippi](https://github.com/ryoppippi)) for retrieving session cost and token metrics from Claude Code's local data files.
+This plugin uses [ccusage](https://github.com/ryoppippi/ccusage) by Ryotaro Kimura ([@ryoppippi](https://github.com/ryoppippi)) for retrieving session cost and token metrics from Claude Code's local data files. ccusage is released under the MIT License.
 
 ## License
 
