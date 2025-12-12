@@ -1,3 +1,6 @@
+// ABOUTME: SessionEnd hook that records session completion with metrics from ccusage
+// ABOUTME: Captures duration, cost, and token usage when a Claude Code session ends
+
 import { stdin } from 'process';
 import path from 'path';
 import { execSync } from 'child_process';
@@ -17,11 +20,11 @@ interface CcusageSession {
  */
 function getSessionMetrics(): CcusageSession | null {
   try {
-    // Use ccusage CLI to get session data
-    const output = execSync('npx ccusage@latest session --json 2>/dev/null', {
+    // Use locally installed ccusage (faster than npx @latest which checks for updates)
+    const output = execSync('npx ccusage session --json', {
       encoding: 'utf-8',
       timeout: 30000,
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'ignore'] // Cross-platform: ignore stderr instead of 2>/dev/null
     });
 
     const data = JSON.parse(output);

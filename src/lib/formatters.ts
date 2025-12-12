@@ -1,3 +1,6 @@
+// ABOUTME: Output formatters for session statistics display
+// ABOUTME: Supports color-coded terminal output and markdown table format
+
 import type { StatsFile } from '../types/index.js';
 
 // ANSI color codes

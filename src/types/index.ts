@@ -1,3 +1,6 @@
+// ABOUTME: TypeScript interfaces for cc-session-track plugin
+// ABOUTME: Defines hook I/O, session rows, and stats file structure
+
 /**
  * Input received by hooks from Claude Code via stdin
  */

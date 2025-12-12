@@ -1,4 +1,8 @@
+// ABOUTME: Detects crashed/orphaned sessions (START without END) and auto-closes them
+// ABOUTME: Marks orphaned sessions with [Abnormal End] flag for visibility
+
 import { parseStatsFile, appendRow } from './stats-file.js';
+import { calculateDuration } from './formatters.js';
 import type { SessionRow } from '../types/index.js';
 
 /**
@@ -40,20 +44,4 @@ export function detectAndCloseOrphans(filePath: string): SessionRow[] {
   }
 
   return closedOrphans;
-}
-
-/**
- * Calculate duration between two ISO timestamps
- */
-function calculateDuration(startISO: string, endISO: string): string {
-  const startMs = new Date(startISO).getTime();
-  const endMs = new Date(endISO).getTime();
-  const durationMs = Math.max(0, endMs - startMs);
-
-  const totalSeconds = Math.floor(durationMs / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }

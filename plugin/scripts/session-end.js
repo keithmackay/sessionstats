@@ -161,10 +161,11 @@ function calculateDuration(startISO, endISO) {
 // src/hooks/session-end.ts
 function getSessionMetrics() {
   try {
-    const output = execSync("npx ccusage@latest session --json 2>/dev/null", {
+    const output = execSync("npx ccusage session --json", {
       encoding: "utf-8",
       timeout: 3e4,
-      stdio: ["pipe", "pipe", "pipe"]
+      stdio: ["pipe", "pipe", "ignore"]
+      // Cross-platform: ignore stderr instead of 2>/dev/null
     });
     const data = JSON.parse(output);
     if (data && data.sessions && data.sessions.length > 0) {

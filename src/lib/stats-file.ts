@@ -1,3 +1,6 @@
+// ABOUTME: Core file operations for reading/writing session_stats.md
+// ABOUTME: Handles CSV parsing, totals calculation, and row appending
+
 import fs from 'fs';
 import path from 'path';
 import type { StatsFile, StatsFileTotals, SessionRow } from '../types/index.js';

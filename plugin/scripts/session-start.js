@@ -138,6 +138,18 @@ function formatMsToTime(ms) {
   return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
+// src/lib/formatters.ts
+function calculateDuration(startISO, endISO) {
+  const startMs = new Date(startISO).getTime();
+  const endMs = new Date(endISO).getTime();
+  const durationMs = Math.max(0, endMs - startMs);
+  const totalSeconds = Math.floor(durationMs / 1e3);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor(totalSeconds % 3600 / 60);
+  const seconds = totalSeconds % 60;
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+}
+
 // src/lib/orphan-detector.ts
 function detectAndCloseOrphans(filePath) {
   const stats = parseStatsFile(filePath);
@@ -166,16 +178,6 @@ function detectAndCloseOrphans(filePath) {
     }
   }
   return closedOrphans;
-}
-function calculateDuration(startISO, endISO) {
-  const startMs = new Date(startISO).getTime();
-  const endMs = new Date(endISO).getTime();
-  const durationMs = Math.max(0, endMs - startMs);
-  const totalSeconds = Math.floor(durationMs / 1e3);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor(totalSeconds % 3600 / 60);
-  const seconds = totalSeconds % 60;
-  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
 // src/hooks/session-start.ts

@@ -1,3 +1,6 @@
+// ABOUTME: SessionStart hook that records when a Claude Code session begins
+// ABOUTME: Also detects and auto-closes orphaned sessions from crashes
+
 import { stdin } from 'process';
 import path from 'path';
 import type { HookInput, HookOutput, SessionRow } from '../types/index.js';
