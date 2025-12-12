@@ -1,0 +1,28 @@
+{
+  "description": "Session tracking hooks for cc-session-track",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|clear|compact|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/session-start.js\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/session-end.js\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

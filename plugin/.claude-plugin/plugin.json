@@ -1,0 +1,18 @@
+{
+  "name": "cc-session-track",
+  "version": "0.1.0",
+  "description": "Auto stats tracker plugin (total aggregated time/cost/tokens per Claude Code project)",
+  "author": {
+    "name": "Keith MacKay"
+  },
+  "repository": "https://github.com/keithmackay/cc-session-track",
+  "license": "MIT",
+  "keywords": [
+    "session",
+    "statistics",
+    "tracking",
+    "usage",
+    "cost",
+    "tokens"
+  ]
+}
