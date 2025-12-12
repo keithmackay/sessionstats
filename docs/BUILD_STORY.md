@@ -364,6 +364,45 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/show-stats.js" md
 
 ---
 
+## Dependency Evaluation: ccusage (December 12, 2025)
+
+Evaluated whether ccusage was the best tool for retrieving session metrics, or if alternatives should be considered.
+
+### Options Analyzed
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **ccusage (current)** | Well-tested, handles pricing updates, actively maintained | External dependency, shell overhead (~1-3s) |
+| **Direct JSONL parsing** | No dependency, faster (<100ms), in-process | Must maintain parser, pricing complexity |
+| **Claude Code Analytics API** | Official API | Up to 1-hour delay, requires admin access |
+
+### Key Discovery
+
+Claude Code stores session data in JSONL files at `~/.claude/projects/`. Each assistant message includes a `usage` field with token counts:
+
+```json
+"usage": {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 2140,
+  "cache_read_input_tokens": 127363,
+  "output_tokens": 230
+}
+```
+
+### Decision
+
+**Stay with ccusage.** Rationale:
+- Actively maintained by [Ryotaro Kimura](https://github.com/ryoppippi)
+- Handles model pricing updates automatically
+- The ~1-3s overhead only occurs at session end (background, not user-facing)
+- Direct parsing would require maintaining our own pricing table
+
+### Acknowledgment Added
+
+Added acknowledgment to README.md crediting ccusage and noting its MIT License.
+
+---
+
 ## Future Enhancements
 
 ### Keith's Ideas
