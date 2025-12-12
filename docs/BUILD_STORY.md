@@ -195,6 +195,66 @@ cc-session-track/
 
 ---
 
+## Local Development & Testing
+
+To test the plugin locally before publishing to a marketplace:
+
+### 1. Create a Local Marketplace
+
+Create a `.claude-plugin/marketplace.json` file in the parent directory of your plugin:
+
+```
+Projects/
+├── .claude-plugin/
+│   └── marketplace.json        # Marketplace definition
+└── cc-session-track/           # This plugin
+    ├── .claude-plugin/
+    │   └── plugin.json
+    └── ...
+```
+
+**marketplace.json contents:**
+```json
+{
+  "name": "local-dev",
+  "owner": {
+    "name": "Keith MacKay"
+  },
+  "plugins": [
+    {
+      "name": "cc-session-track",
+      "source": "./cc-session-track",
+      "description": "Auto stats tracker plugin (total aggregated time/cost/tokens per Claude Code project)"
+    }
+  ]
+}
+```
+
+### 2. Add the Marketplace and Install
+
+```bash
+/plugin marketplace add /path/to/Projects
+/plugin install cc-session-track@local-dev
+```
+
+### 3. Reinstall After Changes
+
+After modifying the plugin code, reinstall to pick up changes:
+
+```bash
+/plugin uninstall cc-session-track@local-dev
+/plugin install cc-session-track@local-dev
+```
+
+### 4. Verify Installation
+
+```bash
+/plugin marketplace list    # Should show local-dev
+/help                       # Should show /session_stats command
+```
+
+---
+
 ## Lessons Learned
 
 1. **TDD works**: Writing tests first caught edge cases early (orphan detection, time calculation)
