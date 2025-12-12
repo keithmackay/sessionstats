@@ -307,6 +307,63 @@ After the initial build, a code review was performed using the `superpowers-deve
 
 ---
 
+## LLM-to-Script Optimization (December 12, 2025)
+
+A second review identified an opportunity to replace LLM usage with script execution for the `/session_stats` command.
+
+### Problem Identified
+
+The original `/session_stats` command was a 94-line markdown prompt that instructed Claude to:
+1. Read the `session_stats.md` file
+2. Parse the CSV data
+3. Format and display output (terminal or markdown)
+
+This consumed ~500-1000 tokens per invocation for entirely deterministic work.
+
+### Solution Implemented
+
+Created `scripts/show-stats.js` that:
+- Reuses existing `parseStatsFile()` from `stats-file.ts`
+- Reuses existing `formatTerminalOutput()` and `formatMarkdownOutput()` from `formatters.ts`
+- Outputs directly to stdout
+
+Simplified the command from 94 lines to 17 lines:
+```markdown
+---
+description: Display session statistics for the current project
+---
+
+Run the session statistics script to display usage data:
+node "${CLAUDE_PLUGIN_ROOT}/scripts/show-stats.js"
+
+If the user's message includes `md` or `markdown`, add the flag:
+node "${CLAUDE_PLUGIN_ROOT}/scripts/show-stats.js" md
+```
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/scripts/show-stats.ts` | New CLI script |
+| `scripts/build-hooks.js` | Added CLI_SCRIPTS array |
+| `commands/session_stats.md` | Simplified from 94 → 17 lines |
+
+### Metrics
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Command prompt size | 94 lines | 17 lines |
+| Tokens per invocation | ~500-1000 | ~50 |
+| Response time | ~2-3s | <100ms |
+| Output consistency | Varies | Exact same always |
+| New script size | N/A | 6.51 KB |
+
+### Key Insight
+
+> "If the output is deterministic, use a script. Save LLM tokens for tasks requiring judgment."
+
+---
+
 ## Future Enhancements
 
 ### Keith's Ideas

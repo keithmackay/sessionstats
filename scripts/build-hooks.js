@@ -13,6 +13,10 @@ const HOOKS = [
   { name: 'session-end', source: 'src/hooks/session-end.ts' }
 ];
 
+const CLI_SCRIPTS = [
+  { name: 'show-stats', source: 'src/scripts/show-stats.ts' }
+];
+
 async function buildHooks() {
   console.log('Building cc-session-track hooks...\n');
 
@@ -55,6 +59,33 @@ async function buildHooks() {
 
     const stats = fs.statSync(path.join(scriptsDir, `${hook.name}.js`));
     console.log(`  ✓ ${hook.name}.js (${(stats.size / 1024).toFixed(2)} KB)`);
+  }
+
+  // Build CLI scripts (for /session_stats command)
+  for (const script of CLI_SCRIPTS) {
+    console.log(`Building ${script.name}...`);
+
+    await build({
+      entryPoints: [path.join(rootDir, script.source)],
+      bundle: true,
+      platform: 'node',
+      target: 'node18',
+      format: 'esm',
+      outfile: path.join(scriptsDir, `${script.name}.js`),
+      minify: false,
+      sourcemap: false,
+      define: {
+        '__VERSION__': `"${version}"`
+      },
+      banner: {
+        js: '#!/usr/bin/env node'
+      }
+    });
+
+    fs.chmodSync(path.join(scriptsDir, `${script.name}.js`), 0o755);
+
+    const stats = fs.statSync(path.join(scriptsDir, `${script.name}.js`));
+    console.log(`  ✓ ${script.name}.js (${(stats.size / 1024).toFixed(2)} KB)`);
   }
 
   // Generate plugin/package.json for runtime
