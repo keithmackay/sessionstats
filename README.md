@@ -157,6 +157,10 @@ Contributions are welcome! Please:
 4. Ensure all tests pass (`npm test`)
 5. Submit a pull request
 
+## Acknowledgments
+
+This plugin uses [ccusage](https://github.com/ryoppippi/ccusage) by Ryotaro Kimura ([@ryoppippi](https://github.com/ryoppippi)) for retrieving session cost and token metrics from Claude Code's local data files.
+
 ## License
 
 MIT
