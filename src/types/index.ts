@@ -35,6 +35,7 @@ export interface SessionRow {
   cost: number | null;
   tokens: number | null;
   flags: string | null;     // e.g., "[Abnormal End]"
+  machineId: string | null; // username@hostname for multi-user merge support
 }
 
 /**

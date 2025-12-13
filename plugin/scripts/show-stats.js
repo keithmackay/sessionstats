@@ -14,14 +14,21 @@ function parseStatsFile(filePath) {
   }
   const content = fs.readFileSync(filePath, "utf-8");
   const lines = content.trim().split("\n");
-  const totals = parseTotalsLine(lines[0] || "");
+  const headerIndex = lines.findIndex((line) => line.startsWith("session_id,"));
+  if (headerIndex === -1) {
+    return {
+      totals: createEmptyTotals(),
+      rows: []
+    };
+  }
   const rows = [];
-  for (let i = 2; i < lines.length; i++) {
-    if (lines[i].trim()) {
+  for (let i = headerIndex + 1; i < lines.length; i++) {
+    if (lines[i].trim() && !lines[i].startsWith("#")) {
       const row = parseCSVRow(lines[i]);
       if (row) rows.push(row);
     }
   }
+  const totals = computeTotals(rows);
   return { totals, rows };
 }
 function createEmptyTotals() {
@@ -31,22 +38,6 @@ function createEmptyTotals() {
     totalClaudeTime: "00:00:00",
     totalCost: 0,
     totalTokens: 0
-  };
-}
-function parseTotalsLine(line) {
-  const defaults = createEmptyTotals();
-  if (!line || !line.includes("Sessions:")) return defaults;
-  const sessionsMatch = line.match(/Sessions:\s*(\d+)/);
-  const durationMatch = line.match(/Duration:\s*([\d:]+)/);
-  const claudeMatch = line.match(/Claude:\s*([\d:]+)/);
-  const costMatch = line.match(/Cost:\s*\$?([\d.]+)/);
-  const tokensMatch = line.match(/Tokens:\s*([\d,]+)/);
-  return {
-    sessions: sessionsMatch ? parseInt(sessionsMatch[1], 10) : 0,
-    totalDuration: durationMatch ? durationMatch[1] : "00:00:00",
-    totalClaudeTime: claudeMatch ? claudeMatch[1] : "00:00:00",
-    totalCost: costMatch ? parseFloat(costMatch[1]) : 0,
-    totalTokens: tokensMatch ? parseInt(tokensMatch[1].replace(/,/g, ""), 10) : 0
   };
 }
 function parseCSVRow(line) {
@@ -62,8 +53,43 @@ function parseCSVRow(line) {
     claudeTime: parts[6] || null,
     cost: parts[7] ? parseFloat(parts[7]) : null,
     tokens: parts[8] ? parseInt(parts[8], 10) : null,
-    flags: parts[9] || null
+    flags: parts[9] || null,
+    machineId: parts[10] || null
   };
+}
+function computeTotals(rows) {
+  const endRows = rows.filter((r) => r.event === "END");
+  let totalDurationMs = 0;
+  let totalClaudeMs = 0;
+  let totalCost = 0;
+  let totalTokens = 0;
+  for (const row of endRows) {
+    if (row.duration) totalDurationMs += parseTimeToMs(row.duration);
+    if (row.claudeTime) totalClaudeMs += parseTimeToMs(row.claudeTime);
+    if (row.cost !== null) totalCost += row.cost;
+    if (row.tokens !== null) totalTokens += row.tokens;
+  }
+  return {
+    sessions: endRows.length,
+    totalDuration: formatMsToTime(totalDurationMs),
+    totalClaudeTime: formatMsToTime(totalClaudeMs),
+    totalCost,
+    totalTokens
+  };
+}
+function parseTimeToMs(time) {
+  const parts = time.split(":").map(Number);
+  if (parts.length === 3) {
+    return (parts[0] * 3600 + parts[1] * 60 + parts[2]) * 1e3;
+  }
+  return 0;
+}
+function formatMsToTime(ms) {
+  const totalSeconds = Math.floor(ms / 1e3);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor(totalSeconds % 3600 / 60);
+  const seconds = totalSeconds % 60;
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
 // src/lib/formatters.ts

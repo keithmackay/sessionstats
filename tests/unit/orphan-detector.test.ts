@@ -32,7 +32,7 @@ describe('orphan-detector', () => {
       event: 'START',
       timestamp: '2025-01-01T10:00:00Z',
       model: 'claude-opus-4',
-      duration: null, claudeTime: null, cost: null, tokens: null, flags: null
+      duration: null, claudeTime: null, cost: null, tokens: null, flags: null, machineId: 'user@host'
     });
     appendRow(statsPath, {
       sessionId: 'complete123',
@@ -40,7 +40,7 @@ describe('orphan-detector', () => {
       event: 'END',
       timestamp: '2025-01-01T10:30:00Z',
       model: 'claude-opus-4',
-      duration: '00:30:00', claudeTime: null, cost: 2.50, tokens: 25000, flags: null
+      duration: '00:30:00', claudeTime: null, cost: 2.50, tokens: 25000, flags: null, machineId: 'user@host'
     });
 
     const orphans = detectAndCloseOrphans(statsPath);
@@ -55,7 +55,7 @@ describe('orphan-detector', () => {
       event: 'START',
       timestamp: '2025-01-01T10:00:00Z',
       model: 'claude-opus-4',
-      duration: null, claudeTime: null, cost: null, tokens: null, flags: null
+      duration: null, claudeTime: null, cost: null, tokens: null, flags: null, machineId: 'user@host'
     });
 
     const orphans = detectAndCloseOrphans(statsPath);
@@ -76,12 +76,12 @@ describe('orphan-detector', () => {
     appendRow(statsPath, {
       sessionId: 'orphan1', project: 'test', event: 'START',
       timestamp: '2025-01-01T09:00:00Z', model: 'claude-opus-4',
-      duration: null, claudeTime: null, cost: null, tokens: null, flags: null
+      duration: null, claudeTime: null, cost: null, tokens: null, flags: null, machineId: 'user@host'
     });
     appendRow(statsPath, {
       sessionId: 'orphan2', project: 'test', event: 'START',
       timestamp: '2025-01-01T10:00:00Z', model: 'claude-sonnet-4',
-      duration: null, claudeTime: null, cost: null, tokens: null, flags: null
+      duration: null, claudeTime: null, cost: null, tokens: null, flags: null, machineId: 'user@host'
     });
 
     const orphans = detectAndCloseOrphans(statsPath);
@@ -97,7 +97,7 @@ describe('orphan-detector', () => {
       event: 'START',
       timestamp: '2025-01-01T10:00:00Z',
       model: 'claude-opus-4-5-20251101',
-      duration: null, claudeTime: null, cost: null, tokens: null, flags: null
+      duration: null, claudeTime: null, cost: null, tokens: null, flags: null, machineId: 'user@host'
     });
 
     const orphans = detectAndCloseOrphans(statsPath);
@@ -116,7 +116,7 @@ describe('orphan-detector', () => {
       event: 'START',
       timestamp: startTime.toISOString(),
       model: 'claude-opus-4',
-      duration: null, claudeTime: null, cost: null, tokens: null, flags: null
+      duration: null, claudeTime: null, cost: null, tokens: null, flags: null, machineId: 'user@host'
     });
 
     const orphans = detectAndCloseOrphans(statsPath);
@@ -132,7 +132,7 @@ describe('orphan-detector', () => {
       event: 'START',
       timestamp: '2025-01-01T10:00:00Z',
       model: 'claude-opus-4',
-      duration: null, claudeTime: null, cost: null, tokens: null, flags: null
+      duration: null, claudeTime: null, cost: null, tokens: null, flags: null, machineId: 'user@host'
     });
 
     // First call closes the orphan

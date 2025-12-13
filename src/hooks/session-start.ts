@@ -4,7 +4,7 @@
 import { stdin } from 'process';
 import path from 'path';
 import type { HookInput, HookOutput, SessionRow } from '../types/index.js';
-import { appendRow } from '../lib/stats-writer.js';
+import { appendRow, getMachineId } from '../lib/stats-writer.js';
 import { detectAndCloseOrphans } from '../lib/orphan-detector.js';
 
 async function sessionStartHook(input: HookInput): Promise<void> {
@@ -32,7 +32,8 @@ async function sessionStartHook(input: HookInput): Promise<void> {
     claudeTime: null,
     cost: null,
     tokens: null,
-    flags: null
+    flags: null,
+    machineId: getMachineId()
   };
 
   try {

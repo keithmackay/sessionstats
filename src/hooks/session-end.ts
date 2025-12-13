@@ -6,7 +6,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 import type { HookInput, HookOutput, SessionRow } from '../types/index.js';
 import { findStartRow } from '../lib/stats-parser.js';
-import { appendRow } from '../lib/stats-writer.js';
+import { appendRow, getMachineId } from '../lib/stats-writer.js';
 import { calculateDuration } from '../lib/formatters.js';
 
 interface CcusageSession {
@@ -76,7 +76,8 @@ async function sessionEndHook(input: HookInput): Promise<void> {
     claudeTime: null, // ccusage doesn't provide this directly
     cost: metrics?.totalCost || null,
     tokens: metrics?.totalTokens || null,
-    flags: startRow ? null : '[No Start Found]'
+    flags: startRow ? null : '[No Start Found]',
+    machineId: getMachineId()
   };
 
   try {

@@ -1,19 +1,28 @@
 // ABOUTME: Writer for session_stats.md file format
-// ABOUTME: Handles writing, appending rows, and recalculating totals
+// ABOUTME: Handles writing rows in append-only format for git merge compatibility
 
 import fs from 'fs';
 import path from 'path';
-import type { StatsFile, StatsFileTotals, SessionRow } from '../types/index.js';
-import { parseStatsFile, CSV_HEADER } from './stats-parser.js';
-import { parseTimeToMs, formatMsToTime } from './formatters.js';
+import os from 'os';
+import type { SessionRow } from '../types/index.js';
+import { parseStatsFile, CSV_HEADER, FILE_HEADER } from './stats-parser.js';
 
 /**
- * Write structured data to session_stats.md
+ * Get machine identifier for multi-user merge support
+ * Format: username@hostname
  */
-export function writeStatsFile(filePath: string, stats: StatsFile): void {
-  const totalsLine = formatTotalsLine(stats.totals);
-  const csvLines = stats.rows.map(formatCSVRow);
-  const content = [totalsLine, CSV_HEADER, ...csvLines].join('\n') + '\n';
+export function getMachineId(): string {
+  const username = os.userInfo().username;
+  const hostname = os.hostname();
+  return `${username}@${hostname}`;
+}
+
+/**
+ * Write stats file with static header and CSV data (no totals line)
+ */
+export function writeStatsFile(filePath: string, rows: SessionRow[]): void {
+  const csvLines = rows.map(formatCSVRow);
+  const content = FILE_HEADER + CSV_HEADER + '\n' + csvLines.join('\n') + '\n';
 
   const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) {
@@ -23,24 +32,13 @@ export function writeStatsFile(filePath: string, stats: StatsFile): void {
 }
 
 /**
- * Append a row to session_stats.md and recalculate totals if END row
+ * Append a row to session_stats.md
+ * Creates file with header if it doesn't exist
  */
 export function appendRow(filePath: string, row: SessionRow): void {
   const stats = parseStatsFile(filePath);
   stats.rows.push(row);
-
-  if (row.event === 'END') {
-    stats.totals = recalculateTotals(stats.rows);
-  }
-
-  writeStatsFile(filePath, stats);
-}
-
-/**
- * Format totals as header line
- */
-export function formatTotalsLine(totals: StatsFileTotals): string {
-  return `Sessions: ${totals.sessions} | Duration: ${totals.totalDuration} | Claude: ${totals.totalClaudeTime} | Cost: $${totals.totalCost.toFixed(2)} | Tokens: ${totals.totalTokens.toLocaleString()}`;
+  writeStatsFile(filePath, stats.rows);
 }
 
 /**
@@ -57,33 +55,7 @@ export function formatCSVRow(row: SessionRow): string {
     row.claudeTime || '',
     row.cost !== null ? row.cost.toFixed(2) : '',
     row.tokens !== null ? row.tokens.toString() : '',
-    row.flags || ''
+    row.flags || '',
+    row.machineId || ''
   ].join(',');
-}
-
-/**
- * Recalculate totals from all END rows
- */
-export function recalculateTotals(rows: SessionRow[]): StatsFileTotals {
-  const endRows = rows.filter(r => r.event === 'END');
-
-  let totalDurationMs = 0;
-  let totalClaudeMs = 0;
-  let totalCost = 0;
-  let totalTokens = 0;
-
-  for (const row of endRows) {
-    if (row.duration) totalDurationMs += parseTimeToMs(row.duration);
-    if (row.claudeTime) totalClaudeMs += parseTimeToMs(row.claudeTime);
-    if (row.cost !== null) totalCost += row.cost;
-    if (row.tokens !== null) totalTokens += row.tokens;
-  }
-
-  return {
-    sessions: endRows.length,
-    totalDuration: formatMsToTime(totalDurationMs),
-    totalClaudeTime: formatMsToTime(totalClaudeMs),
-    totalCost,
-    totalTokens
-  };
 }

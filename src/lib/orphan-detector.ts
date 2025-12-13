@@ -2,7 +2,7 @@
 // ABOUTME: Marks orphaned sessions with [Abnormal End] flag for visibility
 
 import { parseStatsFile } from './stats-parser.js';
-import { appendRow } from './stats-writer.js';
+import { appendRow, getMachineId } from './stats-writer.js';
 import { calculateDuration } from './formatters.js';
 import type { SessionRow } from '../types/index.js';
 
@@ -36,7 +36,8 @@ export function detectAndCloseOrphans(filePath: string): SessionRow[] {
         claudeTime: null,
         cost: null,
         tokens: null,
-        flags: '[Abnormal End]'
+        flags: '[Abnormal End]',
+        machineId: startRow.machineId || getMachineId()
       };
 
       appendRow(filePath, endRow);
