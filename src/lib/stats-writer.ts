@@ -12,7 +12,13 @@ import { parseStatsFile, CSV_HEADER, FILE_HEADER } from './stats-parser.js';
  * Format: username@hostname
  */
 export function getMachineId(): string {
-  const username = os.userInfo().username;
+  let username: string;
+  try {
+    username = os.userInfo().username;
+  } catch {
+    // Fallback for containerized environments or systems without passwd entry
+    username = process.env.USER || process.env.USERNAME || 'unknown';
+  }
   const hostname = os.hostname();
   return `${username}@${hostname}`;
 }

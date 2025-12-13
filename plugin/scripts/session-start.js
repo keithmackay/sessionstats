@@ -106,7 +106,12 @@ function formatMsToTime(ms) {
 
 // src/lib/stats-writer.ts
 function getMachineId() {
-  const username = os.userInfo().username;
+  let username;
+  try {
+    username = os.userInfo().username;
+  } catch {
+    username = process.env.USER || process.env.USERNAME || "unknown";
+  }
   const hostname = os.hostname();
   return `${username}@${hostname}`;
 }

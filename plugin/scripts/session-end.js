@@ -112,7 +112,12 @@ import fs2 from "fs";
 import path from "path";
 import os from "os";
 function getMachineId() {
-  const username = os.userInfo().username;
+  let username;
+  try {
+    username = os.userInfo().username;
+  } catch {
+    username = process.env.USER || process.env.USERNAME || "unknown";
+  }
   const hostname = os.hostname();
   return `${username}@${hostname}`;
 }
