@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/session-start.js\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/plugin/scripts/session-start.js\"",
             "timeout": 30
           }
         ]
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/session-end.js\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/plugin/scripts/session-end.js\"",
             "timeout": 60
           }
         ]
