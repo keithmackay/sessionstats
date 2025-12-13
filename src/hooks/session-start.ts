@@ -4,7 +4,7 @@
 import { stdin } from 'process';
 import path from 'path';
 import type { HookInput, HookOutput, SessionRow } from '../types/index.js';
-import { appendRow } from '../lib/stats-file.js';
+import { appendRow } from '../lib/stats-writer.js';
 import { detectAndCloseOrphans } from '../lib/orphan-detector.js';
 
 async function sessionStartHook(input: HookInput): Promise<void> {

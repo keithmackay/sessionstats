@@ -3,7 +3,7 @@
 // src/scripts/show-stats.ts
 import path from "path";
 
-// src/lib/stats-file.ts
+// src/lib/stats-parser.ts
 import fs from "fs";
 function parseStatsFile(filePath) {
   if (!fs.existsSync(filePath)) {

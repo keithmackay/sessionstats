@@ -5,7 +5,8 @@ import { stdin } from 'process';
 import path from 'path';
 import { execSync } from 'child_process';
 import type { HookInput, HookOutput, SessionRow } from '../types/index.js';
-import { appendRow, findStartRow } from '../lib/stats-file.js';
+import { findStartRow } from '../lib/stats-parser.js';
+import { appendRow } from '../lib/stats-writer.js';
 import { calculateDuration } from '../lib/formatters.js';
 
 interface CcusageSession {

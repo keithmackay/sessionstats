@@ -1,7 +1,8 @@
 // ABOUTME: Detects crashed/orphaned sessions (START without END) and auto-closes them
 // ABOUTME: Marks orphaned sessions with [Abnormal End] flag for visibility
 
-import { parseStatsFile, appendRow } from './stats-file.js';
+import { parseStatsFile } from './stats-parser.js';
+import { appendRow } from './stats-writer.js';
 import { calculateDuration } from './formatters.js';
 import type { SessionRow } from '../types/index.js';
 

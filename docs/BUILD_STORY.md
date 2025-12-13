@@ -166,12 +166,15 @@ cc-session-track/
 ├── src/
 │   ├── types/index.ts               # TypeScript interfaces
 │   ├── lib/
-│   │   ├── stats-file.ts            # Core file operations
+│   │   ├── stats-parser.ts          # File parsing operations
+│   │   ├── stats-writer.ts          # File writing operations
 │   │   ├── orphan-detector.ts       # Crash detection
-│   │   └── formatters.ts            # Output formatting
-│   └── hooks/
-│       ├── session-start.ts         # SessionStart hook
-│       └── session-end.ts           # SessionEnd hook
+│   │   └── formatters.ts            # Time utilities and output formatting
+│   ├── hooks/
+│   │   ├── session-start.ts         # SessionStart hook
+│   │   └── session-end.ts           # SessionEnd hook
+│   └── scripts/
+│       └── show-stats.ts            # CLI stats display
 ├── commands/session_stats.md        # Slash command
 ├── scripts/build-hooks.js           # Build script
 ├── tests/unit/
@@ -185,7 +188,8 @@ cc-session-track/
 │   ├── commands/session_stats.md
 │   └── scripts/
 │       ├── session-start.js         # Compiled hook
-│       └── session-end.js           # Compiled hook
+│       ├── session-end.js           # Compiled hook
+│       └── show-stats.js            # Compiled CLI
 └── docs/
     ├── BUILD_STORY.md               # This file
     └── plans/
@@ -400,6 +404,56 @@ Claude Code stores session data in JSONL files at `~/.claude/projects/`. Each as
 ### Acknowledgment Added
 
 Added acknowledgment to README.md crediting ccusage and noting its MIT License.
+
+---
+
+## Module Refactoring (December 12, 2025)
+
+A code forensics health check identified two areas for improvement:
+
+### Identified Issues
+
+| Issue | Severity | Rationale |
+|-------|----------|-----------|
+| `stats-file.ts` has multiple responsibilities | Low | 183 LOC handling parsing, writing, and totals calculation |
+| Duplicate time formatting logic | Low | `parseTimeToMs`/`formatMsToTime` in stats-file.ts vs similar logic in formatters.ts |
+
+### Changes Made
+
+1. **Consolidated time utilities into `formatters.ts`**
+   - Moved `parseTimeToMs()` and `formatMsToTime()` from stats-file.ts
+   - Now single source of truth for time formatting
+   - Updated ABOUTME to reflect expanded scope
+
+2. **Split `stats-file.ts` into two focused modules**
+   - `stats-parser.ts`: Reading and parsing operations
+     - `parseStatsFile()`, `findStartRow()`, `createEmptyTotals()`
+     - `parseTotalsLine()`, `parseCSVRow()`
+   - `stats-writer.ts`: Writing and modification operations
+     - `writeStatsFile()`, `appendRow()`
+     - `formatTotalsLine()`, `formatCSVRow()`, `recalculateTotals()`
+
+3. **Updated all imports across codebase**
+   - `session-start.ts`: imports from `stats-writer.ts`
+   - `session-end.ts`: imports from both `stats-parser.ts` and `stats-writer.ts`
+   - `orphan-detector.ts`: imports from both modules
+   - `show-stats.ts`: imports from `stats-parser.ts`
+   - All test files updated
+
+### Metrics
+
+| Metric | Before | After |
+|--------|--------|-------|
+| `stats-file.ts` LOC | 183 | N/A (deleted) |
+| `stats-parser.ts` LOC | N/A | 93 |
+| `stats-writer.ts` LOC | N/A | 82 |
+| Time formatting locations | 2 | 1 |
+| Tests passing | 30 | 30 |
+| Bundle sizes | unchanged | unchanged |
+
+### Key Insight
+
+> "Split by responsibility, not by size. Parsing and writing are distinct concerns that change for different reasons."
 
 ---
 

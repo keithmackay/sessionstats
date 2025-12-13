@@ -4,9 +4,12 @@
 import { stdin } from "process";
 import path2 from "path";
 
-// src/lib/stats-file.ts
-import fs from "fs";
+// src/lib/stats-writer.ts
+import fs2 from "fs";
 import path from "path";
+
+// src/lib/stats-parser.ts
+import fs from "fs";
 var CSV_HEADER = "session_id,project,event,timestamp,model,duration,claude_time,cost,tokens,flags";
 function parseStatsFile(filePath) {
   if (!fs.existsSync(filePath)) {
@@ -26,24 +29,6 @@ function parseStatsFile(filePath) {
     }
   }
   return { totals, rows };
-}
-function writeStatsFile(filePath, stats) {
-  const totalsLine = formatTotalsLine(stats.totals);
-  const csvLines = stats.rows.map(formatCSVRow);
-  const content = [totalsLine, CSV_HEADER, ...csvLines].join("\n") + "\n";
-  const dir = path.dirname(filePath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  fs.writeFileSync(filePath, content, "utf-8");
-}
-function appendRow(filePath, row) {
-  const stats = parseStatsFile(filePath);
-  stats.rows.push(row);
-  if (row.event === "END") {
-    stats.totals = recalculateTotals(stats.rows);
-  }
-  writeStatsFile(filePath, stats);
 }
 function createEmptyTotals() {
   return {
@@ -70,9 +55,6 @@ function parseTotalsLine(line) {
     totalTokens: tokensMatch ? parseInt(tokensMatch[1].replace(/,/g, ""), 10) : 0
   };
 }
-function formatTotalsLine(totals) {
-  return `Sessions: ${totals.sessions} | Duration: ${totals.totalDuration} | Claude: ${totals.totalClaudeTime} | Cost: $${totals.totalCost.toFixed(2)} | Tokens: ${totals.totalTokens.toLocaleString()}`;
-}
 function parseCSVRow(line) {
   const parts = line.split(",");
   if (parts.length < 10) return null;
@@ -88,6 +70,55 @@ function parseCSVRow(line) {
     tokens: parts[8] ? parseInt(parts[8], 10) : null,
     flags: parts[9] || null
   };
+}
+
+// src/lib/formatters.ts
+function parseTimeToMs(time) {
+  const parts = time.split(":").map(Number);
+  if (parts.length === 3) {
+    return (parts[0] * 3600 + parts[1] * 60 + parts[2]) * 1e3;
+  }
+  return 0;
+}
+function formatMsToTime(ms) {
+  const totalSeconds = Math.floor(ms / 1e3);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor(totalSeconds % 3600 / 60);
+  const seconds = totalSeconds % 60;
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+}
+function calculateDuration(startISO, endISO) {
+  const startMs = new Date(startISO).getTime();
+  const endMs = new Date(endISO).getTime();
+  const durationMs = Math.max(0, endMs - startMs);
+  const totalSeconds = Math.floor(durationMs / 1e3);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor(totalSeconds % 3600 / 60);
+  const seconds = totalSeconds % 60;
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+}
+
+// src/lib/stats-writer.ts
+function writeStatsFile(filePath, stats) {
+  const totalsLine = formatTotalsLine(stats.totals);
+  const csvLines = stats.rows.map(formatCSVRow);
+  const content = [totalsLine, CSV_HEADER, ...csvLines].join("\n") + "\n";
+  const dir = path.dirname(filePath);
+  if (!fs2.existsSync(dir)) {
+    fs2.mkdirSync(dir, { recursive: true });
+  }
+  fs2.writeFileSync(filePath, content, "utf-8");
+}
+function appendRow(filePath, row) {
+  const stats = parseStatsFile(filePath);
+  stats.rows.push(row);
+  if (row.event === "END") {
+    stats.totals = recalculateTotals(stats.rows);
+  }
+  writeStatsFile(filePath, stats);
+}
+function formatTotalsLine(totals) {
+  return `Sessions: ${totals.sessions} | Duration: ${totals.totalDuration} | Claude: ${totals.totalClaudeTime} | Cost: $${totals.totalCost.toFixed(2)} | Tokens: ${totals.totalTokens.toLocaleString()}`;
 }
 function formatCSVRow(row) {
   return [
@@ -122,32 +153,6 @@ function recalculateTotals(rows) {
     totalCost,
     totalTokens
   };
-}
-function parseTimeToMs(time) {
-  const parts = time.split(":").map(Number);
-  if (parts.length === 3) {
-    return (parts[0] * 3600 + parts[1] * 60 + parts[2]) * 1e3;
-  }
-  return 0;
-}
-function formatMsToTime(ms) {
-  const totalSeconds = Math.floor(ms / 1e3);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor(totalSeconds % 3600 / 60);
-  const seconds = totalSeconds % 60;
-  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-}
-
-// src/lib/formatters.ts
-function calculateDuration(startISO, endISO) {
-  const startMs = new Date(startISO).getTime();
-  const endMs = new Date(endISO).getTime();
-  const durationMs = Math.max(0, endMs - startMs);
-  const totalSeconds = Math.floor(durationMs / 1e3);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor(totalSeconds % 3600 / 60);
-  const seconds = totalSeconds % 60;
-  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
 // src/lib/orphan-detector.ts

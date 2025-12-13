@@ -2,7 +2,7 @@
 // ABOUTME: Replaces LLM-driven formatting with direct script output for efficiency
 
 import path from 'path';
-import { parseStatsFile } from '../lib/stats-file.js';
+import { parseStatsFile } from '../lib/stats-parser.js';
 import { formatTerminalOutput, formatMarkdownOutput } from '../lib/formatters.js';
 
 function showStats(): void {

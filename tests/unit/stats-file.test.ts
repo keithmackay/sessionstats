@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { parseStatsFile, writeStatsFile, appendRow, findStartRow } from '../../src/lib/stats-file.js';
+import { parseStatsFile, findStartRow } from '../../src/lib/stats-parser.js';
+import { writeStatsFile, appendRow } from '../../src/lib/stats-writer.js';
 import type { StatsFile, SessionRow } from '../../src/types/index.js';
 
 describe('stats-file', () => {

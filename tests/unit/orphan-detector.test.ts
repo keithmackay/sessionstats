@@ -3,7 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { detectAndCloseOrphans } from '../../src/lib/orphan-detector.js';
-import { appendRow, parseStatsFile } from '../../src/lib/stats-file.js';
+import { parseStatsFile } from '../../src/lib/stats-parser.js';
+import { appendRow } from '../../src/lib/stats-writer.js';
 
 describe('orphan-detector', () => {
   let testDir: string;
