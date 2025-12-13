@@ -527,6 +527,26 @@ abc123,proj,END,2025-12-13T01:28:00Z,claude-opus-4,00:00:32,,1.32,2174675,,Keith
 | Compute totals on read | Eliminates conflict-prone header line, always accurate |
 | Static header with URL | Users who discover the file understand what it is and how to use it |
 
+### Cross-Platform Compatibility
+
+The `getMachineId()` function uses Node.js built-ins that work on Mac, Windows, and Linux:
+
+| Function | Mac/Linux | Windows |
+|----------|-----------|---------|
+| `os.userInfo().username` | Uses `getpwuid(3)` | Uses `GetUserNameW()` |
+| `os.hostname()` | Uses `gethostname(2)` | Uses `GetComputerNameExW()` |
+
+A defensive fallback was added for containerized environments where `os.userInfo()` may throw:
+
+```typescript
+let username: string;
+try {
+  username = os.userInfo().username;
+} catch {
+  username = process.env.USER || process.env.USERNAME || 'unknown';
+}
+```
+
 ---
 
 ## Future Enhancements
