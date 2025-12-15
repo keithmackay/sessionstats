@@ -1,0 +1,194 @@
+---
+description: Generate or update BUILD_STORY.md documenting project development history
+---
+
+# Build Story Generator
+
+You are tasked with creating or updating a `docs/BUILD_STORY.md` file that chronicles the development of this project. This document captures the collaborative process between human and AI, including prompts, decisions, and implementation details.
+
+## Step 1: Gather Context
+
+First, collect information from multiple sources:
+
+### 1.1 Check for existing BUILD_STORY.md
+```bash
+cat docs/BUILD_STORY.md 2>/dev/null || echo "NO_EXISTING_FILE"
+```
+
+### 1.2 Get git history
+```bash
+git log --oneline --all | head -50
+```
+
+### 1.3 Get detailed recent commits
+```bash
+git log --pretty=format:"### %s%n%nDate: %ad%nAuthor: %an%n%n%b%n---" --date=short -20
+```
+
+### 1.4 Get project metadata
+```bash
+cat package.json 2>/dev/null || cat Cargo.toml 2>/dev/null || cat pyproject.toml 2>/dev/null || echo "{}"
+```
+
+### 1.5 Get README
+```bash
+cat README.md 2>/dev/null || echo "No README"
+```
+
+### 1.6 Get project structure
+```bash
+find . -type f -name "*.ts" -o -name "*.js" -o -name "*.py" -o -name "*.rs" -o -name "*.go" 2>/dev/null | grep -v node_modules | grep -v dist | grep -v build | head -50
+```
+
+## Step 2: Analyze Current Session
+
+Review the conversation history from this session to identify:
+- **User requests**: What did the user ask for?
+- **Design decisions**: What choices were made and why?
+- **Implementation details**: What was built?
+- **Key insights**: What lessons were learned?
+
+## Step 3: Generate or Update BUILD_STORY.md
+
+### If NO existing file:
+
+Create a new `docs/BUILD_STORY.md` with this structure:
+
+```markdown
+# How [PROJECT_NAME] Was Built
+
+This document chronicles the development of [PROJECT_NAME], including the prompts used, decisions made, and the iterative design process.
+
+---
+
+## Project Overview
+
+| Attribute | Value |
+|-----------|-------|
+| **Project** | [name from package.json/etc] |
+| **Description** | [description] |
+| **Started** | [date of first commit] |
+| **Primary Language** | [detected language] |
+
+---
+
+## Development Timeline
+
+[Generate sections for each major phase based on git history, grouping related commits]
+
+### Phase 1: [Initial Setup]
+- [What was created]
+- [Key files added]
+
+### Phase 2: [Feature Name]
+- [What was implemented]
+- [Design decisions]
+
+[Continue for each logical phase...]
+
+---
+
+## Key Technical Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| [decision 1] | [why] |
+| [decision 2] | [why] |
+
+---
+
+## Project Structure
+
+```
+[project tree]
+```
+
+---
+
+## Current Session: [DATE]
+
+### User Request
+> [Quote the main request from this session]
+
+### Changes Made
+[Describe what was done]
+
+### Key Insights
+> "[Any notable lessons or quotes]"
+
+---
+
+## Future Enhancements
+
+- [Ideas mentioned but not yet implemented]
+
+---
+
+*Documentation generated with Claude Code assistance.*
+```
+
+### If file EXISTS:
+
+1. Read the existing content
+2. Identify the last documented date/section
+3. Analyze git commits since then
+4. Add a new section for recent changes:
+
+```markdown
+---
+
+## [Feature/Change Name] ([DATE])
+
+### Context
+[Why was this change needed?]
+
+### User Request
+> [Quote the prompt if available]
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `file1.ts` | [description] |
+| `file2.ts` | [description] |
+
+### Technical Details
+[Implementation specifics]
+
+### Key Insights
+> "[Any lessons learned]"
+```
+
+## Step 4: Write the File
+
+After generating the content, write it to `docs/BUILD_STORY.md`.
+
+If the docs/ directory doesn't exist, create it first:
+```bash
+mkdir -p docs
+```
+
+## Guidelines
+
+1. **Be specific**: Include actual file names, function names, and concrete details
+2. **Quote prompts**: When possible, include the actual user requests in blockquotes
+3. **Explain rationale**: Don't just say what was done, explain why
+4. **Track metrics**: Include before/after comparisons when relevant (bundle size, test count, etc.)
+5. **Preserve history**: When updating, never remove existing content - only append
+6. **Use tables**: They make technical decisions and changes scannable
+7. **Include code snippets**: Short examples help illustrate key patterns
+8. **Date everything**: Each section should have a date for future reference
+
+## Output
+
+After completing the BUILD_STORY.md, provide a brief summary:
+- Whether you created a new file or updated existing
+- How many sections were added
+- Key highlights captured
+
+If updating, also run:
+```bash
+git diff docs/BUILD_STORY.md | head -100
+```
+
+To show what was added.
