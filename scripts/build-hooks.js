@@ -3,10 +3,13 @@
 import { build } from 'esbuild';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
+
+const GLOBAL_COMMANDS = ['start_session.md', 'end_session.md'];
 
 const HOOKS = [
   { name: 'session-start', source: 'src/hooks/session-start.ts' },
@@ -136,6 +139,19 @@ async function buildHooks() {
       );
     }
     console.log('  ✓ commands/ copied to plugin/');
+  }
+
+  // Install global commands to ~/.claude/commands/
+  const globalCommandsDir = path.join(os.homedir(), '.claude', 'commands');
+  if (!fs.existsSync(globalCommandsDir)) {
+    fs.mkdirSync(globalCommandsDir, { recursive: true });
+  }
+  for (const cmd of GLOBAL_COMMANDS) {
+    const src = path.join(commandsSrc, cmd);
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, path.join(globalCommandsDir, cmd));
+      console.log(`  ✓ ${cmd} installed to ~/.claude/commands/`);
+    }
   }
 
   console.log('\n✓ All hooks built successfully!');
