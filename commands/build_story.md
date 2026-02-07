@@ -40,6 +40,13 @@ cat README.md 2>/dev/null || echo "No README"
 find . -type f -name "*.ts" -o -name "*.js" -o -name "*.py" -o -name "*.rs" -o -name "*.go" 2>/dev/null | grep -v node_modules | grep -v dist | grep -v build | head -50
 ```
 
+### 1.7 Get user prompt history from Claude Code transcripts
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/plugin/scripts/extract-prompts.js"
+```
+
+This outputs all user prompts from every Claude Code session for this project, grouped by date with timestamps. Include ALL of these prompts in the BUILD_STORY.md output.
+
 ## Step 2: Analyze Current Session
 
 Review the conversation history from this session to identify:
@@ -105,16 +112,9 @@ This document chronicles the development of [PROJECT_NAME], including the prompt
 
 ---
 
-## Current Session: [DATE]
+## Prompt History
 
-### User Request
-> [Quote the main request from this session]
-
-### Changes Made
-[Describe what was done]
-
-### Key Insights
-> "[Any notable lessons or quotes]"
+Include every user prompt from the extract-prompts output, organized chronologically. Present each prompt as a blockquote with its timestamp. Group by date.
 
 ---
 
@@ -159,6 +159,8 @@ This document chronicles the development of [PROJECT_NAME], including the prompt
 > "[Any lessons learned]"
 ```
 
+5. Update the **Prompt History** section with any new prompts not already documented.
+
 ## Step 4: Write the File
 
 After generating the content, write it to `docs/BUILD_STORY.md`.
@@ -171,7 +173,7 @@ mkdir -p docs
 ## Guidelines
 
 1. **Be specific**: Include actual file names, function names, and concrete details
-2. **Quote prompts**: When possible, include the actual user requests in blockquotes
+2. **Quote prompts**: Include ALL user prompts from the extract-prompts output in the Prompt History section
 3. **Explain rationale**: Don't just say what was done, explain why
 4. **Track metrics**: Include before/after comparisons when relevant (bundle size, test count, etc.)
 5. **Preserve history**: When updating, never remove existing content - only append

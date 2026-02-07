@@ -17,7 +17,8 @@ const HOOKS = [
 ];
 
 const CLI_SCRIPTS = [
-  { name: 'show-stats', source: 'src/scripts/show-stats.ts' }
+  { name: 'show-stats', source: 'src/scripts/show-stats.ts' },
+  { name: 'extract-prompts', source: 'src/scripts/extract-prompts.ts' }
 ];
 
 async function buildHooks() {
