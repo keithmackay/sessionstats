@@ -57,4 +57,16 @@ describe('aggregateByTag', () => {
     const result = aggregateByTag([root], 'team-infra');
     expect(result.projects).toHaveLength(1);
   });
+
+  it('skips a project with corrupt config.json without crashing the whole report', () => {
+    makeProject(root, 'proj-good', ['team-infra'], 1.00);
+
+    const badDir = path.join(root, 'proj-bad');
+    fs.mkdirSync(path.join(badDir, '.sessionstats'), { recursive: true });
+    fs.writeFileSync(path.join(badDir, '.sessionstats', 'config.json'), '{ not valid json');
+
+    const result = aggregateByTag([root], 'team-infra');
+    expect(result.projects).toHaveLength(1);
+    expect(result.projects[0].projectName).toBe('proj-good');
+  });
 });

@@ -33,16 +33,29 @@ export function aggregateByTag(scanRoots: string[], tag: string | null): ReportR
       const configPath = path.join(projectDir, '.sessionstats', 'config.json');
       if (!fs.existsSync(configPath)) continue;
 
-      const config: ProjectConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-      if (tag && !config.tags.includes(tag)) continue;
+      let config: ProjectConfig;
+      try {
+        config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      } catch (error) {
+        console.error(`[sessionstats] Skipping ${entry.name}: could not read .sessionstats/config.json (${error})`);
+        continue;
+      }
+      const tags = Array.isArray(config.tags) ? config.tags : [];
+      if (tag && !tags.includes(tag)) continue;
 
       const statsPath = path.join(projectDir, '.sessionstats', 'session_stats.json');
-      const stats = parseStatsFile(statsPath);
+      let stats;
+      try {
+        stats = parseStatsFile(statsPath);
+      } catch (error) {
+        console.error(`[sessionstats] Skipping ${entry.name}: could not read .sessionstats/session_stats.json (${error})`);
+        continue;
+      }
       const endRows = stats.rows.filter(r => r.event === 'END');
 
       projects.push({
         projectName: config.projectName,
-        tags: config.tags,
+        tags,
         cost: endRows.reduce((s, r) => s + rowCost(r), 0),
         tokens: endRows.reduce((s, r) => s + rowTokens(r), 0),
         sessions: endRows.length,
