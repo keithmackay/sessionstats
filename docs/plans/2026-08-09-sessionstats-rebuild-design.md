@@ -1,7 +1,7 @@
 # sessionstats Rebuild — Design
 
 Date: 2026-08-09
-Status: Approved, ready for implementation planning
+Status: Revised after critical-design-review round 1 — ready for implementation planning
 
 ## Background
 
@@ -20,8 +20,9 @@ Two projects currently overlap:
 2. Extract `git-analysis.py` (and anything that exists solely to support it) into a new, separate project: `~/Projects/gitanalysis`. It does not belong in `sessionstats`.
 3. Port `claude-metrics.py`'s JSONL-parsing engine into `sessionstats` (TypeScript), replacing the current `ccusage`-derived flat `cost`/`tokens` fields.
 4. Add a `.sessionstats/` per-project folder: project config + JSON output, replacing the root-level `session_stats.md`.
-5. Add tagging and a local cross-project report command.
+5. Add multi-tagging and a local cross-project report command.
 6. Add an opt-in "post to web" config flag and a stable JSON data contract for it — **no actual HTTP upload in this phase**; that's explicitly a later, separate design.
+7. Delete the legacy `/start_session` and `/end_session` commands — superseded by the automated hook pipeline and incompatible with the new `.sessionstats/` design (resolved forced decision from critical-design-review round 1; see below).
 
 Out of scope (explicitly deferred, not forgotten):
 - The website itself and the real upload/HTTP POST implementation.
@@ -63,20 +64,22 @@ Created (or updated) by the `SessionStart` hook when missing, and directly by `/
 
 **Setup flow** (first-run and `/session_setup` share the same flow):
 - Hook detects no `.sessionstats/config.json` on `SessionStart`. It creates the file with defaults and a `needsSetupConfirmation: true` marker (hooks can't prompt interactively — they're non-interactive shell processes), and includes a note in its output instructing Claude to interactively confirm/adjust the config with the user on the next turn.
-- Defaults: `projectName` = project folder name (`path.basename(cwd)`), `userEmail` = `git config user.email` (verified working), `tag` = `""`, `postToWeb` = `false`.
+- Defaults: `projectName` = project folder name (`path.basename(cwd)`), `userEmail` = `git config user.email` (verified working), `tags` = `[]`, `postToWeb` = `false`.
 - Once the user confirms/adjusts via the interactive flow, `needsSetupConfirmation` is cleared.
 - `/session_setup` command runs the identical interactive flow anytime, pre-filled with current values — this is how the config gets edited later (in addition to hand-editing the JSON).
+- Setup is the only place session tracking can be blocked by human input, and even then it isn't: if `needsSetupConfirmation` is never resolved, the hooks still record sessions with default config (empty `tags`, folder-name `projectName`, no web posting) — tracking itself never depends on the interactive step completing. This matches the goal of capturing token usage as automatically and failsafe as possible.
 
 **`.sessionstats/config.json` schema:**
 ```json
 {
   "schemaVersion": 1,
   "projectName": "string",
-  "tag": "string",
+  "tags": ["string"],
   "userEmail": "string",
   "postToWeb": false
 }
 ```
+`tags` is an array (not a single string) so one project can be aggregated at multiple, independent levels — e.g. a team tag and a feature/epic tag simultaneously. No structure is imposed on individual tag values (no reserved "team:" / "epic:" prefix) — they're an unordered set of labels, and Design §5's report command can filter/group by any one of them.
 
 **`.sessionstats/session_stats.json`** — JSON is the source of truth (not CSV/Markdown), since data is now nested (per-model breakdown) and needs to be reused as-is for the future web POST payload. Each row:
 ```json
@@ -100,21 +103,30 @@ Created (or updated) by the `SessionStart` hook when missing, and directly by `/
 ```
 `schemaVersion` is stored at the file level alongside the row array, so both the local report and the future website can detect format changes.
 
-`session_stats.md` becomes a **rendered view only**, regenerated from the JSON (not hand-appended) — same terminal/markdown formatting `formatters.ts` already produces, just sourced from JSON rows instead of parsed CSV lines.
+`session_stats.md` becomes a **rendered view only**, regenerated from the JSON (not hand-appended).
+
+**Dependents requiring rework for the new schema** (found by critical-design-review round 1 — the earlier draft incorrectly assumed these needed no changes):
+- `src/lib/formatters.ts` — `formatTerminalOutput`/`formatMarkdownOutput` currently read flat `row.cost`/`row.tokens`/`row.model` and `stats.totals.totalClaudeTime`/`totalCost`/`totalTokens`. Both functions must be rewritten to sum cost/tokens across each row's `models[]` array (per row and for totals); `totalClaudeTime` is removed from `StatsFileTotals` (`src/types/index.ts`) and both render functions, since nothing produces it under the new schema.
+- `src/lib/orphan-detector.ts` — currently builds the auto-closed "END" row with `model: startRow.model`, `cost: null`, `tokens: null`, `claudeTime: null`. Must instead build a row conforming to the new schema (`models: []`, no `claudeTime` field) when auto-closing an orphaned session.
+- The totals-computation logic (currently `computeTotals` in `stats-parser.ts`, tied to the CSV format) is superseded by an equivalent JSON-native aggregation that sums across `models[]` per row — this is the same rework as `formatters.ts`'s totals path above, just centralized rather than duplicated.
 
 **`.gitignore` handling:** if the project already has a `.gitignore`, `.sessionstats/` is appended to it. If no `.gitignore` exists, nothing is created — the project is left as-is.
 
-### 5. Tagging + cross-project reporting
+### 5. Multi-tagging + cross-project reporting
 
-- `tag` (from project config) is stored on every row via `.sessionstats/session_stats.json`.
-- New command, e.g. `/sessionstats_report --tag <name>` (omit `--tag` for all), scans configurable `scanRoots` (plugin-level config, default `["~/Projects"]`) for `.sessionstats/` folders and aggregates matching sessions: totals plus per-project and per-model breakdown.
-- This local aggregation logic is deliberately the same shape the future website will implement server-side over POSTed data — no separate design needed later, just a different data source.
+- `tags` (array, from project config) is stored on every row via `.sessionstats/session_stats.json`, so a project's sessions can be aggregated at more than one level at once (e.g. a team tag and a feature/epic tag on the same project).
+- New command, e.g. `/sessionstats_report --tag <name>` (omit `--tag` for all), scans configurable `scanRoots` (plugin-level config, default `["~/Projects"]`) for `.sessionstats/` folders and aggregates sessions from any project whose `tags` array **contains** the given tag — a project with `["team-infra", "epic-billing"]` shows up under either `--tag team-infra` or `--tag epic-billing`. Totals plus per-project and per-model breakdown.
+- This local aggregation logic is deliberately the same shape the future website will implement server-side over POSTed data (including the "contains" match over the `tags` array) — no separate design needed later, just a different data source.
 
 ### 6. Web posting — config + data contract only
 
 - **Plugin-level config**: `~/.claude/sessionstats/config.json`, holding `websiteUrl` (shared across all projects). Set via a new `/sessionstats_config` command, prompted interactively (same non-interactive-hook constraint doesn't apply here since this is a real command, not a hook).
 - **Per-project `postToWeb` flag** (Section 4) controls whether a given project's sessions *would* be sent.
-- **Data contract**: the POST payload is the same `session_stats.json` row object already defined in Section 4 — no separate schema. This phase stores/prepares this data; it does not implement the actual HTTP POST call. When the later phase adds real uploading, it reads `postToWeb` + `websiteUrl` and sends the existing JSON rows — no data-model rework required then.
+- **Data contract**: the POST payload is the same `session_stats.json` row object already defined in Section 4 (including the `tags` array) — no separate schema. This phase stores/prepares this data; it does not implement the actual HTTP POST call. When the later phase adds real uploading, it reads `postToWeb` + `websiteUrl` and sends the existing JSON rows — no data-model rework required then. Posting from multiple machines/team members under the same `tags` is what enables cross-machine/cross-team aggregation once the website exists.
+
+### 7. Delete legacy `/start_session` and `/end_session` commands
+
+**Resolved forced decision from critical-design-review round 1.** `commands/start_session.md` and `commands/end_session.md` are pre-hook, LLM-driven commands that hand-append free-text lines (`[project] session, Start Time: ...`) directly to `session_stats.md` at the project root — a second, incompatible writer alongside the automated hook pipeline, targeting both the wrong location (root instead of `.sessionstats/`) and an incompatible format (free text instead of the JSON schema). Per the automated/failsafe-tracking goal, these are deleted outright rather than rewritten: hooks already capture every session unconditionally (Section 4), so a manual, easy-to-forget alternative path adds risk (silent format drift, missed invocations) without adding coverage.
 
 ## Verified assumptions
 
@@ -126,7 +138,7 @@ Created (or updated) by the `SessionStart` hook when missing, and directly by `/
 | `git config user.email` resolves in this environment | Ran the command — returned a valid email |
 | Plugin installed via directory-source marketplace pointed at `~/Projects` | Read `known_marketplaces.json` — confirmed; rename requires reinstall |
 | No per-turn processing-duration data exists in transcript JSONL (`claudeTime` can't be derived) | Parsed a real transcript JSONL directly — `message.diagnostics` only contains `cache_miss_reason`; no timing fields found across all assistant entries |
-| Nothing outside `stats-parser.ts`/`stats-writer.ts`/`formatters.ts` reads the flat `cost`/`tokens` fields | Read `tests/unit/*.test.ts` and all `src/` files — only those three modules plus their tests touch `SessionRow.cost`/`.tokens` |
+~~Nothing outside `stats-parser.ts`/`stats-writer.ts`/`formatters.ts` reads the flat `cost`/`tokens` fields~~ — **FAILED** (critical-design-review round 1) | Full-population grep across `src/` and `tests/` also found `orphan-detector.ts:34` and `formatters.ts` (lines 90, 129–131, 75–77, 116–118) as dependents. Design §4 now explicitly lists all affected files and their required rework instead of assuming no changes needed. |
 | `claude-metrics.py`'s JSONL parsing logic uses only Python stdlib (no exotic deps to reconcile when porting to TS) | Read full `claude-metrics.py` — only `json`, `os`, `sys`, `argparse`, `datetime`, `pathlib`, `collections` |
 | Docs/plans convention in this repo is `docs/plans/*.md`, not `docs/specs/` | `ls docs/plans` — confirmed existing files there (`IMPLEMENTATION_PLAN.md`, etc.) |
 
@@ -135,3 +147,7 @@ Created (or updated) by the `SessionStart` hook when missing, and directly by `/
 - Actual web upload (HTTP POST implementation, retries, error handling) — explicitly deferred to a later phase/design, per user direction.
 - `git-analysis.py`'s own code/tests are unaudited as part of this move — it transfers as-is.
 - `claude-sessions` repo itself is left in place, not deleted/archived, pending a follow-up decision after this migration ships.
+
+## Review history
+
+- **critical-design-review round 1** (`docs/criticalreviews/2026-08-09-sessionstats-rebuild-design-critical-review-1.md`): found the "no rework needed" claim for `formatters.ts`/`orphan-detector.ts` was false (§2.1), and surfaced the legacy `start_session`/`end_session` commands as an unresolved forced decision (§3.1). Both resolved above — §2.1 fix folded into Design §4; §3.1 resolved as deletion (Design §7), per explicit user direction to keep tracking as automated and failsafe as possible.
