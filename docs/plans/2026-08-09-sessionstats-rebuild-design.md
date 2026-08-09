@@ -23,6 +23,7 @@ Two projects currently overlap:
 5. Add multi-tagging (with a dedicated tags-only edit command) and a local cross-project report command.
 6. Add an opt-in "post to web" config flag and a stable JSON data contract for it — **no actual HTTP upload in this phase**; that's explicitly a later, separate design.
 7. Delete the legacy `/start_session` and `/end_session` commands — superseded by the automated hook pipeline and incompatible with the new `.sessionstats/` design (resolved forced decision from critical-design-review round 1; see below).
+8. One-time, throwaway migration script: walks `~/Projects`, sets up `.sessionstats/config.json` (defaults) and migrates each project's old root `session_stats.md` CSV into `.sessionstats/session_stats.json`, then deletes the old CSV (resolved forced decision from critical-design-review round 2; see below).
 
 Out of scope (explicitly deferred, not forgotten):
 - The website itself and the real upload/HTTP POST implementation.
@@ -110,6 +111,7 @@ Created (or updated) by the `SessionStart` hook when missing, and directly by `/
 - `src/lib/formatters.ts` — `formatTerminalOutput`/`formatMarkdownOutput` currently read flat `row.cost`/`row.tokens`/`row.model` and `stats.totals.totalClaudeTime`/`totalCost`/`totalTokens`. Both functions must be rewritten to sum cost/tokens across each row's `models[]` array (per row and for totals); `totalClaudeTime` is removed from `StatsFileTotals` (`src/types/index.ts`) and both render functions, since nothing produces it under the new schema.
 - `src/lib/orphan-detector.ts` — currently builds the auto-closed "END" row with `model: startRow.model`, `cost: null`, `tokens: null`, `claudeTime: null`. Must instead build a row conforming to the new schema (`models: []`, no `claudeTime` field) when auto-closing an orphaned session.
 - The totals-computation logic (currently `computeTotals` in `stats-parser.ts`, tied to the CSV format) is superseded by an equivalent JSON-native aggregation that sums across `models[]` per row — this is the same rework as `formatters.ts`'s totals path above, just centralized rather than duplicated.
+- **Gap handling for migrated rows (Section 8):** aggregation must treat `null` per-model fields (`input`/`output`/`cacheRead`/`cacheWrite`) and `null` `apiMessages`/`userMessages`/`toolCalls`/`subagentCount`/`cacheHitRate` as "unknown — contributes nothing to that specific breakdown," not as 0-and-therefore-equivalent-to-a-fully-tracked-zero-usage-session. Rows carrying `"[Migrated]"` in `flags` are historical/partial and must be visually distinguishable in both `formatTerminalOutput`/`formatMarkdownOutput` and `/sessionstats_report`'s output (e.g. shown with their known `cost`/`duration` totals, but flagged rather than silently presented as equal-granularity to hook-tracked rows).
 
 **`.gitignore` handling:** if the project already has a `.gitignore`, `.sessionstats/` is appended to it. If no `.gitignore` exists, nothing is created — the project is left as-is.
 
@@ -128,6 +130,23 @@ Created (or updated) by the `SessionStart` hook when missing, and directly by `/
 ### 7. Delete legacy `/start_session` and `/end_session` commands
 
 **Resolved forced decision from critical-design-review round 1.** `commands/start_session.md` and `commands/end_session.md` are pre-hook, LLM-driven commands that hand-append free-text lines (`[project] session, Start Time: ...`) directly to `session_stats.md` at the project root — a second, incompatible writer alongside the automated hook pipeline, targeting both the wrong location (root instead of `.sessionstats/`) and an incompatible format (free text instead of the JSON schema). Per the automated/failsafe-tracking goal, these are deleted outright rather than rewritten: hooks already capture every session unconditionally (Section 4), so a manual, easy-to-forget alternative path adds risk (silent format drift, missed invocations) without adding coverage.
+
+### 8. One-time migration of legacy `session_stats.md` history
+
+**Resolved forced decision from critical-design-review round 2.** ~70 projects under `~/Projects` already have real accumulated CSV data in a root-level `session_stats.md` (verified: `cc-session-track` itself has 8 rows, `modelrouter` has 118, `dujour` 80, `snapabrick` 63, etc.). A standalone, throwaway Node script (not part of the plugin's runtime, deleted/archived after use) performs a one-time migration:
+
+- Walks `~/Projects/*` (one level deep) for directories containing a root `session_stats.md`.
+- For each: creates `.sessionstats/` if missing, writes `.sessionstats/config.json` with defaults — `projectName` = folder name, `userEmail` = `git config user.email` (per-project, falling back to global), `tags: []` (existing projects get no tags by default — the user assigns them later via `/session_tags`), `postToWeb: false`, `schemaVersion: 1`. Skipped if `.sessionstats/config.json` already exists (idempotent — doesn't clobber a project someone has already configured).
+- Parses the old CSV (`session_id,project,event,timestamp,model,duration,claude_time,cost,tokens,flags,machine_id`) and converts each row into the new schema:
+  - `models: model ? [{model, input: null, output: null, cacheRead: null, cacheWrite: null, cost}] : []` — the old format never tracked per-token-type or per-model breakdown, only one flat model name and total cost, so those fields are `null` (unknown), not `0` (known-zero).
+  - `apiMessages`, `userMessages`, `toolCalls`, `subagentCount`, `cacheHitRate`: all `null` — never tracked by the old format.
+  - `flags`: original flags (e.g. `[Abnormal End]`) plus `[Migrated]` appended, so migrated rows are identifiable at aggregation time (see Design §4's gap-handling requirement above).
+  - `sessionId`, `project`, `event`, `timestamp`, `duration`, `machineId` carry over unchanged.
+- Writes `.sessionstats/session_stats.json` (skipped if it already exists — idempotent).
+- Deletes the old root `session_stats.md` **only after** the new JSON file is successfully written and readable back.
+- Runs in **dry-run mode by default** (prints the per-project plan: create/skip config, row count to migrate, file to delete) and only performs writes/deletes when passed an explicit confirmation flag — consistent with how destructive, multi-repo operations are otherwise handled in this environment.
+
+This script is explicitly throwaway: it's a migration aid for the one-time cutover, not a feature of `sessionstats` itself, and isn't shipped as part of the plugin.
 
 ## Verified assumptions
 
@@ -152,3 +171,4 @@ Created (or updated) by the `SessionStart` hook when missing, and directly by `/
 ## Review history
 
 - **critical-design-review round 1** (`docs/criticalreviews/2026-08-09-sessionstats-rebuild-design-critical-review-1.md`): found the "no rework needed" claim for `formatters.ts`/`orphan-detector.ts` was false (§2.1), and surfaced the legacy `start_session`/`end_session` commands as an unresolved forced decision (§3.1). Both resolved above — §2.1 fix folded into Design §4; §3.1 resolved as deletion (Design §7), per explicit user direction to keep tracking as automated and failsafe as possible.
+- **critical-design-review round 2** (`docs/criticalreviews/2026-08-09-sessionstats-rebuild-design-critical-review-2.md`): found ~70 projects have pre-existing `session_stats.md` history unaddressed by the migration (§3.1). Resolved as Design §8 — one-time throwaway migration script, with gap-handling for the resulting partial-data rows folded into Design §4's dependents-rework requirements.
