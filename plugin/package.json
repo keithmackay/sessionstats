@@ -1,5 +1,5 @@
 {
-  "name": "cc-session-track-plugin",
+  "name": "sessionstats-plugin",
   "version": "0.1.0",
   "private": true,
   "type": "module",

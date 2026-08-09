@@ -95,7 +95,7 @@ async function buildHooks() {
 
   // Generate plugin/package.json for runtime
   const pluginPackageJson = {
-    name: 'cc-session-track-plugin',
+    name: 'sessionstats-plugin',
     version: version,
     private: true,
     type: 'module',
