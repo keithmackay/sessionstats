@@ -1,5 +1,5 @@
 {
-  "description": "Session tracking hooks for cc-session-track",
+  "description": "Session tracking hooks for sessionstats",
   "hooks": {
     "SessionStart": [
       {
