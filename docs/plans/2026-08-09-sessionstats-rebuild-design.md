@@ -148,6 +148,17 @@ Created (or updated) by the `SessionStart` hook when missing, and directly by `/
 
 This script is explicitly throwaway: it's a migration aid for the one-time cutover, not a feature of `sessionstats` itself, and isn't shipped as part of the plugin.
 
+**Script verified against the final design.** `scripts/migrate-legacy-session-stats.mjs` was checked field-by-field against the schemas above:
+
+| Schema (this spec) | Script (line) |
+|---|---|
+| `config.json`: `schemaVersion`, `projectName`, `tags`, `userEmail`, `postToWeb` | lines 106–110, all five fields present, same names, same defaults (`tags: []`, `postToWeb: false`) |
+| `session_stats.json` file wrapper: `schemaVersion` + `rows` | line 118 |
+| Row: `sessionId`, `project`, `event`, `timestamp`, `duration`, `models`, `apiMessages`, `userMessages`, `toolCalls`, `subagentCount`, `cacheHitRate`, `flags`, `machineId` | lines 53–72, every field present with matching names; the five new-in-this-design fields (`apiMessages`/`userMessages`/`toolCalls`/`subagentCount`/`cacheHitRate`) are `null` as specified above, not `0` |
+| Row's `models[]` entry: `model`, `input`, `output`, `cacheRead`, `cacheWrite`, `cost` | lines 59–65, matching names; `input`/`output`/`cacheRead`/`cacheWrite` are `null`, `cost` carries over from the CSV |
+
+Re-ran the dry run (`node scripts/migrate-legacy-session-stats.mjs`, no `--yes`) against the real `~/Projects` after this verification: 73 projects detected, all with a per-project plan printed (rows found, config/JSON create-or-skip, CSV marked for deletion), zero errors. No files were modified — confirmation to actually run remains a separate, explicit step outside this script's default behavior.
+
 ## Verified assumptions
 
 | Assumption | Verification |
