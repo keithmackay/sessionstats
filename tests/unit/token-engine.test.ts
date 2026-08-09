@@ -63,23 +63,29 @@ describe('parseSessionTranscript (with subagent rollup)', () => {
     const subagentDir = path.join(testDir, sessionId, 'subagents');
     fs.mkdirSync(subagentDir, { recursive: true });
 
-    const assistantLine = (tokens: number) => JSON.stringify({
+    const assistantLine = (input: number, output: number, cacheRead: number, cacheWrite: number) => JSON.stringify({
       type: 'assistant', timestamp: '2026-01-01T00:00:00Z',
       message: {
         model: 'claude-sonnet-4-5-20250929',
-        usage: { input_tokens: tokens, output_tokens: tokens, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+        usage: { input_tokens: input, output_tokens: output, cache_read_input_tokens: cacheRead, cache_creation_input_tokens: cacheWrite },
         content: [],
       },
     });
 
-    fs.writeFileSync(transcriptPath, assistantLine(1000) + '\n');
-    fs.writeFileSync(path.join(subagentDir, 'agent-1.jsonl'), assistantLine(500) + '\n');
-    fs.writeFileSync(path.join(subagentDir, 'agent-2.jsonl'), assistantLine(300) + '\n');
+    fs.writeFileSync(transcriptPath, assistantLine(1000, 400, 50, 10) + '\n');
+    fs.writeFileSync(path.join(subagentDir, 'agent-1.jsonl'), assistantLine(500, 200, 20, 0) + '\n');
+    fs.writeFileSync(path.join(subagentDir, 'agent-2.jsonl'), assistantLine(300, 100, 0, 5) + '\n');
 
     const result = parseSessionTranscript(transcriptPath);
 
     expect(result.subagentCount).toBe(2);
-    expect(result.models[0].input).toBe(1800); // 1000 (parent) + 500 + 300 (subagents)
+    expect(result.models).toHaveLength(1);
+    const merged = result.models[0];
+    expect(merged.input).toBe(1800);   // 1000 + 500 + 300
+    expect(merged.output).toBe(700);   // 400 + 200 + 100
+    expect(merged.cacheRead).toBe(70); // 50 + 20 + 0
+    expect(merged.cacheWrite).toBe(15); // 10 + 0 + 5
+    expect(merged.cost).toBeGreaterThan(0);
 
     fs.rmSync(testDir, { recursive: true, force: true });
   });
