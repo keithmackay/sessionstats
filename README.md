@@ -4,14 +4,17 @@ Auto stats tracker plugin (total aggregated time/cost/tokens per Claude Code pro
 
 ## Description
 
-sessionstats is a Claude Code marketplace plugin that automatically tracks session statistics using lifecycle hooks. When a Claude session starts, the plugin records the project name, timestamp, and session ID. When a session ends, it captures end time, calculates duration, and retrieves cost/token metrics from ccusage. All statistics are stored in `session_stats.md` at the project root.
+sessionstats is a Claude Code marketplace plugin that automatically tracks session statistics using lifecycle hooks. When a Claude session starts, the plugin records the project name, timestamp, and session ID. When a session ends, it captures end time, calculates duration, and computes cost/token metrics by parsing the session transcript directly against an internal pricing table (no external CLI dependency). All statistics are stored per-project in `.sessionstats/session_stats.json`, with `.sessionstats/session_stats.md` regenerated from it as a human-readable view.
 
 **Key Features:**
 - **Automatic tracking** - Hooks fire on session lifecycle events, no manual commands needed
-- **Per-project stats** - Each project maintains its own `session_stats.md` file
-- **Multi-user support** - Machine ID column enables team collaboration with git merge-friendly format
+- **Per-project stats** - Each project maintains its own `.sessionstats/` folder with JSON source-of-truth data
+- **Direct transcript parsing** - Cost and token counts are computed from the session transcript with a built-in pricing table, no `ccusage` dependency
+- **Per-model breakdown** - Stats and reports break down cost/tokens by model
+- **Tagging** - Projects can carry multiple tags for grouping and cross-project aggregation
+- **Multi-user support** - Machine ID field enables team collaboration with git merge-friendly append-only data
 - **Orphan detection** - Crashed sessions are auto-closed with `[Abnormal End]` flag
-- **Visual reporting** - `/session_stats` command shows formatted statistics
+- **Visual reporting** - `/session_stats` shows per-project stats; `/sessionstats_report` shows cross-project totals, optionally filtered by tag
 - **Cross-platform** - Works on Mac, Windows, and Linux
 
 ## Requirements
@@ -33,9 +36,9 @@ claude plugin install sessionstats
 
 Once installed, the plugin works automatically:
 
-1. **Start a Claude session** - A START row is added to `session_stats.md`
-2. **End the session** - An END row is added with duration, cost, and token metrics
-3. **View stats** - Run `/session_stats` for a formatted summary
+1. **Start a Claude session** - A START row is added to `.sessionstats/session_stats.json` (and `.sessionstats/config.json` is created for the project if it doesn't exist yet)
+2. **End the session** - An END row is added with duration, per-model cost, and token metrics
+3. **View stats** - Run `/session_stats` for a formatted summary, or `/sessionstats_report` for totals across all projects
 
 ### /session_stats Command
 
@@ -54,7 +57,6 @@ Once installed, the plugin works automatically:
   ────────────────────────────────────
   Sessions:     12
   Total Time:   04:23:15
-  Claude Time:  01:45:30
   Total Cost:   $8.42
   Total Tokens: 2,345,678
 
@@ -63,6 +65,17 @@ Once installed, the plugin works automatically:
   Dec 12, 2:30 PM   1h 15m   $2.34   opus-4-5
   Dec 12, 4:00 PM   30m      $0.89   sonnet-4-5  [Abnormal End]
 ```
+
+### Other Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/session_setup` | Interactively confirm/edit this project's full config: project name, tags, user email, and the (not-yet-implemented) post-to-web intent |
+| `/session_tags` | Quick edit of just this project's `tags`, leaving the rest of the config untouched |
+| `/session_stats` | Display this project's session statistics |
+| `/sessionstats_report` | Cross-project cost/token totals (with per-project and per-model breakdown), optionally filtered with `--tag <tag-name>` |
+| `/sessionstats_config` | Set plugin-level config: `websiteUrl` and `scanRoots` (used by `/sessionstats_report` to find `.sessionstats/` folders) |
+| `/build_story` | Generate or update `docs/BUILD_STORY.md` documenting project development history |
 
 ## How It Works
 
@@ -83,34 +96,51 @@ sessionstats uses Claude Code's hook system to intercept session lifecycle event
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ SessionEnd Hook                                             │
-│ ├─ Query ccusage for session metrics (cost, tokens)        │
+│ ├─ Parse the session transcript directly (no ccusage)      │
+│ ├─ Compute per-model cost/tokens via internal pricing      │
 │ ├─ Calculate duration from START timestamp                 │
 │ └─ Record END row with all metrics                         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## session_stats.md Format
+## .sessionstats/ Storage
 
-The stats file uses a CSV format with a static header for git merge compatibility:
+Each project gets a `.sessionstats/` folder at its root:
 
-```
-# Session Statistics
-# Generated by sessionstats plugin
-# https://github.com/keithmackay/sessionstats
-# Run /session_stats to see aggregated statistics
-session_id,project,event,timestamp,model,duration,claude_time,cost,tokens,flags,machine_id
-abc123,my-project,START,2025-01-01T10:00:00Z,,,,,,Keith.MacKay@Keiths-MacBook
-abc123,my-project,END,2025-01-01T10:30:00Z,claude-opus-4,00:30:00,,2.50,25000,,Keith.MacKay@Keiths-MacBook
-def456,my-project,START,2025-01-01T11:00:00Z,,,,,,Jane.Doe@Janes-Laptop
-def456,my-project,END,2025-01-01T11:30:00Z,claude-sonnet-4,00:30:00,,1.50,15000,[Abnormal End],Jane.Doe@Janes-Laptop
+- **`config.json`** - per-project config: `projectName`, `tags` (array, multiple tags per project supported), `userEmail`, `postToWeb` (intent flag for a future posting feature, see below)
+- **`session_stats.json`** - the source of truth: schema version, running totals, and a `rows` array of START/END session records, each END row carrying a per-model breakdown of input/output/cache tokens and cost
+- **`session_stats.md`** - a regenerated, human-readable rendering of `session_stats.json`. It is not hand-edited and gets rewritten whenever stats change.
+
+Example `session_stats.json` row (abridged):
+
+```json
+{
+  "sessionId": "abc123",
+  "project": "my-project",
+  "event": "END",
+  "timestamp": "2025-01-01T10:30:00Z",
+  "duration": "00:30:00",
+  "models": [
+    { "model": "claude-opus-4-5-20251101", "input": 12000, "output": 3000, "cacheRead": 8000, "cacheWrite": 2000, "cost": 2.5 }
+  ],
+  "flags": null,
+  "machineId": "Keith.MacKay@Keiths-MacBook"
+}
 ```
 
 **Design for multi-user collaboration:**
-- Static header (no merge conflicts)
-- Append-only data rows (git can auto-merge)
-- `machine_id` column identifies which user/machine generated each session
-- `session_id` UUID pairs START/END rows even after merging
+- JSON is the source of truth; append-only `rows` array
+- `machineId` field identifies which user/machine generated each session
+- `sessionId` UUID pairs START/END rows even after merging
 - Totals computed dynamically when viewing stats
+
+## Tagging and Cross-Project Reporting
+
+Each project's `.sessionstats/config.json` can carry any number of `tags` (set via `/session_setup` or quickly via `/session_tags`). `/sessionstats_report` scans the directories configured in `scanRoots` (via `/sessionstats_config`, default `~/Projects`) for `.sessionstats/` folders and aggregates cost/token totals across all of them, or just the ones matching a given `--tag`, with per-project and per-model breakdown.
+
+## Posting to a Website (planned, not yet implemented)
+
+`ProjectConfig.postToWeb` and the plugin-level `websiteUrl` (set via `/sessionstats_config`) record the *intent* to eventually push session data to a configured website for shared visibility. This upload mechanism does not exist yet -- setting these flags today has no effect beyond recording the setting.
 
 ### Flags
 
@@ -142,8 +172,8 @@ npm run build
 sessionstats/
 ├── src/
 │   ├── hooks/           # SessionStart/SessionEnd hook scripts
-│   ├── lib/             # Core logic (stats-parser, stats-writer, orphan-detector, formatters)
-│   ├── scripts/         # CLI scripts (show-stats)
+│   ├── lib/             # Core logic (stats-parser, stats-writer, orphan-detector, formatters, token-engine, pricing)
+│   ├── scripts/         # CLI scripts (show-stats, report, extract-prompts)
 │   └── types/           # TypeScript interfaces
 ├── plugin/              # Built distribution for marketplace
 ├── tests/unit/          # Unit tests (vitest)
@@ -167,10 +197,6 @@ Contributions are welcome! Please:
 3. Write tests for new functionality
 4. Ensure all tests pass (`npm test`)
 5. Submit a pull request
-
-## Acknowledgments
-
-This plugin uses [ccusage](https://github.com/ryoppippi/ccusage) by Ryotaro Kimura ([@ryoppippi](https://github.com/ryoppippi)) for retrieving session cost and token metrics from Claude Code's local data files. ccusage is released under the MIT License.
 
 ## License
 
