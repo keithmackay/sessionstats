@@ -1,9 +1,6 @@
-// ABOUTME: TypeScript interfaces for cc-session-track plugin
-// ABOUTME: Defines hook I/O, session rows, and stats file structure
+// ABOUTME: TypeScript interfaces for sessionstats plugin
+// ABOUTME: Defines hook I/O, session rows, stats file structure, and per-project/plugin config
 
-/**
- * Input received by hooks from Claude Code via stdin
- */
 export interface HookInput {
   session_id: string;
   transcript_path: string;
@@ -13,46 +10,59 @@ export interface HookInput {
   reason?: 'exit' | 'clear' | 'logout' | 'prompt_input_exit' | 'other';
 }
 
-/**
- * Output returned by hooks to Claude Code via stdout
- */
 export interface HookOutput {
   continue: boolean;
   suppressOutput: boolean;
 }
 
-/**
- * A single row in session_stats.md (either START or END event)
- */
+export interface ModelUsage {
+  model: string;
+  input: number | null;
+  output: number | null;
+  cacheRead: number | null;
+  cacheWrite: number | null;
+  cost: number | null;
+}
+
 export interface SessionRow {
   sessionId: string;
   project: string;
   event: 'START' | 'END';
-  timestamp: string;        // ISO 8601 format
-  model: string | null;
-  duration: string | null;  // "HH:MM:SS" format, only for END
-  claudeTime: string | null;
-  cost: number | null;
-  tokens: number | null;
-  flags: string | null;     // e.g., "[Abnormal End]"
-  machineId: string | null; // username@hostname for multi-user merge support
+  timestamp: string;
+  duration: string | null;
+  models: ModelUsage[];
+  apiMessages: number | null;
+  userMessages: number | null;
+  toolCalls: number | null;
+  subagentCount: number | null;
+  cacheHitRate: number | null;
+  flags: string | null;
+  machineId: string | null;
 }
 
-/**
- * Aggregated totals stored in the header of session_stats.md
- */
 export interface StatsFileTotals {
   sessions: number;
-  totalDuration: string;    // "HH:MM:SS"
-  totalClaudeTime: string;  // "HH:MM:SS"
+  totalDuration: string;
   totalCost: number;
   totalTokens: number;
 }
 
-/**
- * Parsed representation of session_stats.md
- */
 export interface StatsFile {
+  schemaVersion: number;
   totals: StatsFileTotals;
   rows: SessionRow[];
+}
+
+export interface ProjectConfig {
+  schemaVersion: number;
+  projectName: string;
+  tags: string[];
+  userEmail: string | null;
+  postToWeb: boolean;
+  needsSetupConfirmation?: boolean;
+}
+
+export interface PluginConfig {
+  websiteUrl: string | null;
+  scanRoots: string[];
 }
