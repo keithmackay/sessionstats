@@ -156,5 +156,21 @@ describe('formatters', () => {
       const output = formatMarkdownOutput(sampleStats, 'test');
       expect(output).toContain('75,000');
     });
+
+    it('shows [Migrated] flag and N/A fallback for rows with no models[] in markdown output', () => {
+      const stats = {
+        schemaVersion: 1,
+        totals: { sessions: 1, totalDuration: '00:00:00', totalCost: 5, totalTokens: 10000 },
+        rows: [{
+          sessionId: 'x', project: 'p', event: 'END', timestamp: '2026-01-01T00:00:00Z',
+          duration: null, models: [],
+          apiMessages: null, userMessages: null, toolCalls: null, subagentCount: null, cacheHitRate: null,
+          flags: '[Migrated]', machineId: 'user@host',
+        }],
+      };
+      const output = formatMarkdownOutput(stats, 'p');
+      expect(output).toContain('[Migrated]');
+      expect(output).toContain('N/A');
+    });
   });
 });
