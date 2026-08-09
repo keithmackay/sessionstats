@@ -1,97 +1,62 @@
-// ABOUTME: SessionEnd hook that records session completion with metrics from ccusage
-// ABOUTME: Captures duration, cost, and token usage when a Claude Code session ends
+// ABOUTME: SessionEnd hook — parses the transcript + subagents via token-engine (no ccusage), records END
+// ABOUTME: Applies project config's tags/postToWeb to the row for future reporting/upload
 
 import { stdin } from 'process';
 import path from 'path';
-import { execSync } from 'child_process';
 import type { HookInput, HookOutput, SessionRow } from '../types/index.js';
 import { findStartRow } from '../lib/stats-parser.js';
 import { appendRow, getMachineId } from '../lib/stats-writer.js';
 import { calculateDuration } from '../lib/formatters.js';
-
-interface CcusageSession {
-  sessionId: string;
-  totalCost: number;
-  totalTokens: number;
-  modelsUsed: string[];
-}
-
-/**
- * Get session metrics from ccusage CLI
- */
-function getSessionMetrics(): CcusageSession | null {
-  try {
-    // Use locally installed ccusage (faster than npx @latest which checks for updates)
-    const output = execSync('npx ccusage session --json', {
-      encoding: 'utf-8',
-      timeout: 30000,
-      stdio: ['pipe', 'pipe', 'ignore'] // Cross-platform: ignore stderr instead of 2>/dev/null
-    });
-
-    const data = JSON.parse(output);
-    if (data && data.sessions && data.sessions.length > 0) {
-      // Get the most recent session (should be the current one)
-      const session = data.sessions[data.sessions.length - 1];
-      return {
-        sessionId: session.sessionId || '',
-        totalCost: session.totalCost || 0,
-        totalTokens: session.totalTokens || 0,
-        modelsUsed: session.modelsUsed || []
-      };
-    }
-  } catch (error) {
-    // ccusage may not be available or may fail - that's OK
-    console.error('[cc-session-track] Could not get ccusage metrics (this is OK)');
-  }
-  return null;
-}
+import { parseSessionTranscript } from '../lib/token-engine.js';
+import { loadOrCreateProjectConfig } from '../lib/project-config.js';
 
 async function sessionEndHook(input: HookInput): Promise<void> {
-  const statsPath = path.join(input.cwd, 'session_stats.md');
+  const statsPath = path.join(input.cwd, '.sessionstats', 'session_stats.json');
   const projectName = path.basename(input.cwd);
   const endTime = new Date().toISOString();
 
-  // Find matching START row
   const startRow = findStartRow(statsPath, input.session_id);
+  const config = loadOrCreateProjectConfig(input.cwd);
 
-  // Get metrics from ccusage
-  const metrics = getSessionMetrics();
+  let transcriptStats;
+  try {
+    transcriptStats = parseSessionTranscript(input.transcript_path);
+  } catch (error) {
+    console.error('[sessionstats] Could not read transcript (this is OK):', error);
+    transcriptStats = { models: [], apiMessages: 0, userMessages: 0, toolCalls: 0, cacheHitRate: 0, subagentCount: 0 };
+  }
 
-  // Calculate duration if we have a start time
-  const duration = startRow
-    ? calculateDuration(startRow.timestamp, endTime)
-    : null;
+  const duration = startRow ? calculateDuration(startRow.timestamp, endTime) : null;
 
-  // Determine model - prefer ccusage data, fallback to start row
-  const model = metrics?.modelsUsed[0] || startRow?.model || null;
-
-  // Record END row
   const endRow: SessionRow = {
     sessionId: input.session_id,
     project: projectName,
     event: 'END',
     timestamp: endTime,
-    model,
     duration,
-    claudeTime: null, // ccusage doesn't provide this directly
-    cost: metrics?.totalCost || null,
-    tokens: metrics?.totalTokens || null,
+    models: transcriptStats.models,
+    apiMessages: transcriptStats.apiMessages,
+    userMessages: transcriptStats.userMessages,
+    toolCalls: transcriptStats.toolCalls,
+    subagentCount: transcriptStats.subagentCount,
+    cacheHitRate: transcriptStats.cacheHitRate,
     flags: startRow ? null : '[No Start Found]',
-    machineId: getMachineId()
+    machineId: getMachineId(),
   };
 
   try {
     appendRow(statsPath, endRow);
   } catch (error) {
-    console.error('[cc-session-track] Error recording session end:', error);
+    console.error('[sessionstats] Error recording session end:', error);
   }
 
-  // Output success response
+  // config.tags / config.postToWeb are available here for the future web-upload phase (not implemented yet).
+  void config;
+
   const output: HookOutput = { continue: true, suppressOutput: true };
   console.log(JSON.stringify(output));
 }
 
-// Entry point - read JSON from stdin
 let inputData = '';
 stdin.setEncoding('utf8');
 stdin.on('data', (chunk) => { inputData += chunk; });
@@ -100,8 +65,7 @@ stdin.on('end', async () => {
     const parsed: HookInput = JSON.parse(inputData);
     await sessionEndHook(parsed);
   } catch (error) {
-    console.error('[cc-session-track] Hook error:', error);
-    // Always output valid JSON even on error
+    console.error('[sessionstats] Hook error:', error);
     console.log('{"continue": true, "suppressOutput": true}');
   }
 });
