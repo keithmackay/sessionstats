@@ -43,23 +43,29 @@ describe('formatters', () => {
 
   describe('formatTerminalOutput', () => {
     const sampleStats: StatsFile = {
+      schemaVersion: 1,
       totals: {
         sessions: 5,
         totalDuration: '02:30:00',
-        totalClaudeTime: '00:45:00',
         totalCost: 12.50,
         totalTokens: 125000
       },
       rows: [
         {
           sessionId: 'abc123', project: 'test', event: 'END',
-          timestamp: '2025-01-01T10:30:00Z', model: 'claude-opus-4',
-          duration: '00:30:00', claudeTime: '00:05:00', cost: 2.50, tokens: 25000, flags: null
+          timestamp: '2025-01-01T10:30:00Z',
+          duration: '00:30:00',
+          models: [{ model: 'claude-opus-4', input: 10000, output: 5000, cacheRead: 5000, cacheWrite: 5000, cost: 2.50 }],
+          apiMessages: null, userMessages: null, toolCalls: null, subagentCount: null, cacheHitRate: null,
+          flags: null, machineId: null
         },
         {
           sessionId: 'def456', project: 'test', event: 'END',
-          timestamp: '2025-01-01T11:30:00Z', model: 'claude-sonnet-4',
-          duration: '00:45:00', claudeTime: null, cost: 3.00, tokens: 30000, flags: '[Abnormal End]'
+          timestamp: '2025-01-01T11:30:00Z',
+          duration: '00:45:00',
+          models: [{ model: 'claude-sonnet-4', input: 12000, output: 6000, cacheRead: 6000, cacheWrite: 6000, cost: 3.00 }],
+          apiMessages: null, userMessages: null, toolCalls: null, subagentCount: null, cacheHitRate: null,
+          flags: '[Abnormal End]', machineId: null
         }
       ]
     };
@@ -85,22 +91,40 @@ describe('formatters', () => {
       const output = formatTerminalOutput(sampleStats, 'test');
       expect(output).toContain('[Abnormal End]');
     });
+
+    it('marks [Migrated] rows distinctly in terminal output', () => {
+      const stats = {
+        schemaVersion: 1,
+        totals: { sessions: 1, totalDuration: '00:00:00', totalCost: 5, totalTokens: 10000 },
+        rows: [{
+          sessionId: 'x', project: 'p', event: 'END', timestamp: '2026-01-01T00:00:00Z',
+          duration: null, models: [{ model: 'unknown', input: null, output: null, cacheRead: null, cacheWrite: null, cost: 5 }],
+          apiMessages: null, userMessages: null, toolCalls: null, subagentCount: null, cacheHitRate: null,
+          flags: '[Migrated]', machineId: 'user@host',
+        }],
+      };
+      const output = formatTerminalOutput(stats, 'p');
+      expect(output).toContain('[Migrated]');
+    });
   });
 
   describe('formatMarkdownOutput', () => {
     const sampleStats: StatsFile = {
+      schemaVersion: 1,
       totals: {
         sessions: 3,
         totalDuration: '01:30:00',
-        totalClaudeTime: '00:30:00',
         totalCost: 7.50,
         totalTokens: 75000
       },
       rows: [
         {
           sessionId: 'abc123', project: 'test', event: 'END',
-          timestamp: '2025-01-01T10:30:00Z', model: 'claude-opus-4',
-          duration: '00:30:00', claudeTime: '00:05:00', cost: 2.50, tokens: 25000, flags: null
+          timestamp: '2025-01-01T10:30:00Z',
+          duration: '00:30:00',
+          models: [{ model: 'claude-opus-4', input: 10000, output: 5000, cacheRead: 5000, cacheWrite: 5000, cost: 2.50 }],
+          apiMessages: null, userMessages: null, toolCalls: null, subagentCount: null, cacheHitRate: null,
+          flags: null, machineId: null
         }
       ]
     };
