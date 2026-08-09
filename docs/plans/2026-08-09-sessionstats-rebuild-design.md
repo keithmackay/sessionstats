@@ -20,7 +20,7 @@ Two projects currently overlap:
 2. Extract `git-analysis.py` (and anything that exists solely to support it) into a new, separate project: `~/Projects/gitanalysis`. It does not belong in `sessionstats`.
 3. Port `claude-metrics.py`'s JSONL-parsing engine into `sessionstats` (TypeScript), replacing the current `ccusage`-derived flat `cost`/`tokens` fields.
 4. Add a `.sessionstats/` per-project folder: project config + JSON output, replacing the root-level `session_stats.md`.
-5. Add multi-tagging and a local cross-project report command.
+5. Add multi-tagging (with a dedicated tags-only edit command) and a local cross-project report command.
 6. Add an opt-in "post to web" config flag and a stable JSON data contract for it — **no actual HTTP upload in this phase**; that's explicitly a later, separate design.
 7. Delete the legacy `/start_session` and `/end_session` commands — superseded by the automated hook pipeline and incompatible with the new `.sessionstats/` design (resolved forced decision from critical-design-review round 1; see below).
 
@@ -66,8 +66,9 @@ Created (or updated) by the `SessionStart` hook when missing, and directly by `/
 - Hook detects no `.sessionstats/config.json` on `SessionStart`. It creates the file with defaults and a `needsSetupConfirmation: true` marker (hooks can't prompt interactively — they're non-interactive shell processes), and includes a note in its output instructing Claude to interactively confirm/adjust the config with the user on the next turn.
 - Defaults: `projectName` = project folder name (`path.basename(cwd)`), `userEmail` = `git config user.email` (verified working), `tags` = `[]`, `postToWeb` = `false`.
 - Once the user confirms/adjusts via the interactive flow, `needsSetupConfirmation` is cleared.
-- `/session_setup` command runs the identical interactive flow anytime, pre-filled with current values — this is how the config gets edited later (in addition to hand-editing the JSON).
+- `/session_setup` command runs the identical interactive flow anytime, pre-filled with current values — this is how the full config gets edited later (in addition to hand-editing the JSON).
 - Setup is the only place session tracking can be blocked by human input, and even then it isn't: if `needsSetupConfirmation` is never resolved, the hooks still record sessions with default config (empty `tags`, folder-name `projectName`, no web posting) — tracking itself never depends on the interactive step completing. This matches the goal of capturing token usage as automatically and failsafe as possible.
+- **`/session_tags` command** — a narrower, tags-only interactive flow, for the common case of changing one tag (e.g. switching to a new feature/epic tag when starting new work) without touching `projectName`, `userEmail`, or `postToWeb`. Shows the current `tags` array and lets the user add/remove individual entries; everything else in `config.json` is left untouched. This is the routine day-to-day entry point; `/session_setup` remains for full reconfiguration.
 
 **`.sessionstats/config.json` schema:**
 ```json
