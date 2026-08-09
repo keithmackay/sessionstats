@@ -7,12 +7,19 @@ import os from 'os';
 import { parseStatsFile, rowCost, rowTokens } from '../lib/stats-parser.js';
 import type { ProjectConfig } from '../types/index.js';
 
+export interface ModelAggregate {
+  model: string;
+  cost: number;
+  tokens: number;
+}
+
 export interface ProjectAggregate {
   projectName: string;
   tags: string[];
   cost: number;
   tokens: number;
   sessions: number;
+  models: ModelAggregate[];
 }
 
 export interface ReportResult {
@@ -53,12 +60,24 @@ export function aggregateByTag(scanRoots: string[], tag: string | null): ReportR
       }
       const endRows = stats.rows.filter(r => r.event === 'END');
 
+      const byModel = new Map<string, { cost: number; tokens: number }>();
+      for (const row of endRows) {
+        for (const m of row.models) {
+          const entry = byModel.get(m.model) ?? { cost: 0, tokens: 0 };
+          entry.cost += m.cost ?? 0;
+          entry.tokens += (m.input ?? 0) + (m.output ?? 0) + (m.cacheRead ?? 0) + (m.cacheWrite ?? 0);
+          byModel.set(m.model, entry);
+        }
+      }
+      const models: ModelAggregate[] = Array.from(byModel.entries()).map(([model, v]) => ({ model, ...v }));
+
       projects.push({
         projectName: config.projectName,
         tags,
         cost: endRows.reduce((s, r) => s + rowCost(r), 0),
         tokens: endRows.reduce((s, r) => s + rowTokens(r), 0),
         sessions: endRows.length,
+        models,
       });
     }
   }
@@ -87,6 +106,9 @@ function printReport(): void {
   console.log('='.repeat(60));
   for (const p of result.projects) {
     console.log(`  ${p.projectName.padEnd(24)} sessions:${p.sessions.toString().padStart(4)}  cost:$${p.cost.toFixed(2)}`);
+    for (const m of p.models) {
+      console.log(`    ↳ ${m.model.padEnd(28)} cost:$${m.cost.toFixed(2)}  tokens:${m.tokens.toLocaleString()}`);
+    }
   }
   console.log('-'.repeat(60));
   console.log(`  TOTAL cost: $${result.totalCost.toFixed(2)}  tokens: ${result.totalTokens.toLocaleString()}`);

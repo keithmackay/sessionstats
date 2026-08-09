@@ -20,6 +20,27 @@ function makeProject(root: string, name: string, tags: string[], cost: number) {
   }));
 }
 
+function makeProjectWithModels(
+  root: string,
+  name: string,
+  tags: string[],
+  models: { model: string; input: number; output: number; cacheRead: number; cacheWrite: number; cost: number }[]
+) {
+  const dir = path.join(root, name);
+  fs.mkdirSync(path.join(dir, '.sessionstats'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '.sessionstats', 'config.json'), JSON.stringify({
+    schemaVersion: 1, projectName: name, tags, userEmail: null, postToWeb: false,
+  }));
+  fs.writeFileSync(path.join(dir, '.sessionstats', 'session_stats.json'), JSON.stringify({
+    schemaVersion: 1,
+    rows: [{
+      sessionId: 's1', project: name, event: 'END', timestamp: '2026-01-01T00:00:00Z', duration: '00:10:00',
+      models,
+      apiMessages: 1, userMessages: 1, toolCalls: 0, subagentCount: 0, cacheHitRate: 0, flags: null, machineId: 'u@h',
+    }],
+  }));
+}
+
 describe('aggregateByTag', () => {
   let root: string;
 
@@ -68,5 +89,26 @@ describe('aggregateByTag', () => {
     const result = aggregateByTag([root], 'team-infra');
     expect(result.projects).toHaveLength(1);
     expect(result.projects[0].projectName).toBe('proj-good');
+  });
+
+  it('produces a correct per-model breakdown for a project', () => {
+    makeProjectWithModels(root, 'proj-multi', ['team-infra'], [
+      { model: 'claude-sonnet-4-5-20250929', input: 3000, output: 2000, cacheRead: 0, cacheWrite: 0, cost: 1.00 },
+      { model: 'claude-opus-4-5-20251101', input: 300, output: 200, cacheRead: 0, cacheWrite: 0, cost: 0.23 },
+    ]);
+
+    const result = aggregateByTag([root], 'team-infra');
+    expect(result.projects).toHaveLength(1);
+
+    const models = result.projects[0].models;
+    expect(models).toHaveLength(2);
+
+    const sonnet = models.find(m => m.model === 'claude-sonnet-4-5-20250929');
+    expect(sonnet?.cost).toBeCloseTo(1.00, 2);
+    expect(sonnet?.tokens).toBe(5000);
+
+    const opus = models.find(m => m.model === 'claude-opus-4-5-20251101');
+    expect(opus?.cost).toBeCloseTo(0.23, 2);
+    expect(opus?.tokens).toBe(500);
   });
 });
