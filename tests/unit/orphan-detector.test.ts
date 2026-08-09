@@ -31,16 +31,16 @@ describe('orphan-detector', () => {
       project: 'test',
       event: 'START',
       timestamp: '2025-01-01T10:00:00Z',
-      model: 'claude-opus-4',
-      duration: null, claudeTime: null, cost: null, tokens: null, flags: null, machineId: 'user@host'
+      duration: null, models: [], apiMessages: null, userMessages: null, toolCalls: null, subagentCount: null, cacheHitRate: null, flags: null, machineId: 'user@host'
     });
     appendRow(statsPath, {
       sessionId: 'complete123',
       project: 'test',
       event: 'END',
       timestamp: '2025-01-01T10:30:00Z',
-      model: 'claude-opus-4',
-      duration: '00:30:00', claudeTime: null, cost: 2.50, tokens: 25000, flags: null, machineId: 'user@host'
+      duration: '00:30:00',
+      models: [{ model: 'claude-opus-4', input: 20000, output: 5000, cacheRead: 0, cacheWrite: 0, cost: 2.50 }],
+      apiMessages: null, userMessages: null, toolCalls: null, subagentCount: null, cacheHitRate: null, flags: null, machineId: 'user@host'
     });
 
     const orphans = detectAndCloseOrphans(statsPath);
@@ -54,8 +54,7 @@ describe('orphan-detector', () => {
       project: 'test',
       event: 'START',
       timestamp: '2025-01-01T10:00:00Z',
-      model: 'claude-opus-4',
-      duration: null, claudeTime: null, cost: null, tokens: null, flags: null, machineId: 'user@host'
+      duration: null, models: [], apiMessages: null, userMessages: null, toolCalls: null, subagentCount: null, cacheHitRate: null, flags: null, machineId: 'user@host'
     });
 
     const orphans = detectAndCloseOrphans(statsPath);
@@ -75,13 +74,13 @@ describe('orphan-detector', () => {
   it('closes multiple orphaned sessions', () => {
     appendRow(statsPath, {
       sessionId: 'orphan1', project: 'test', event: 'START',
-      timestamp: '2025-01-01T09:00:00Z', model: 'claude-opus-4',
-      duration: null, claudeTime: null, cost: null, tokens: null, flags: null, machineId: 'user@host'
+      timestamp: '2025-01-01T09:00:00Z',
+      duration: null, models: [], apiMessages: null, userMessages: null, toolCalls: null, subagentCount: null, cacheHitRate: null, flags: null, machineId: 'user@host'
     });
     appendRow(statsPath, {
       sessionId: 'orphan2', project: 'test', event: 'START',
-      timestamp: '2025-01-01T10:00:00Z', model: 'claude-sonnet-4',
-      duration: null, claudeTime: null, cost: null, tokens: null, flags: null, machineId: 'user@host'
+      timestamp: '2025-01-01T10:00:00Z',
+      duration: null, models: [], apiMessages: null, userMessages: null, toolCalls: null, subagentCount: null, cacheHitRate: null, flags: null, machineId: 'user@host'
     });
 
     const orphans = detectAndCloseOrphans(statsPath);
@@ -90,20 +89,19 @@ describe('orphan-detector', () => {
     expect(orphans.map(o => o.sessionId).sort()).toEqual(['orphan1', 'orphan2']);
   });
 
-  it('preserves model from START row in closed orphan', () => {
+  it('preserves project from START row in closed orphan (no model/token/cost data available)', () => {
     appendRow(statsPath, {
       sessionId: 'orphan-model',
       project: 'my-project',
       event: 'START',
       timestamp: '2025-01-01T10:00:00Z',
-      model: 'claude-opus-4-5-20251101',
-      duration: null, claudeTime: null, cost: null, tokens: null, flags: null, machineId: 'user@host'
+      duration: null, models: [], apiMessages: null, userMessages: null, toolCalls: null, subagentCount: null, cacheHitRate: null, flags: null, machineId: 'user@host'
     });
 
     const orphans = detectAndCloseOrphans(statsPath);
 
-    expect(orphans[0].model).toBe('claude-opus-4-5-20251101');
     expect(orphans[0].project).toBe('my-project');
+    expect(orphans[0].models).toEqual([]);
   });
 
   it('calculates duration for closed orphan', () => {
@@ -115,8 +113,7 @@ describe('orphan-detector', () => {
       project: 'test',
       event: 'START',
       timestamp: startTime.toISOString(),
-      model: 'claude-opus-4',
-      duration: null, claudeTime: null, cost: null, tokens: null, flags: null, machineId: 'user@host'
+      duration: null, models: [], apiMessages: null, userMessages: null, toolCalls: null, subagentCount: null, cacheHitRate: null, flags: null, machineId: 'user@host'
     });
 
     const orphans = detectAndCloseOrphans(statsPath);
@@ -131,8 +128,7 @@ describe('orphan-detector', () => {
       project: 'test',
       event: 'START',
       timestamp: '2025-01-01T10:00:00Z',
-      model: 'claude-opus-4',
-      duration: null, claudeTime: null, cost: null, tokens: null, flags: null, machineId: 'user@host'
+      duration: null, models: [], apiMessages: null, userMessages: null, toolCalls: null, subagentCount: null, cacheHitRate: null, flags: null, machineId: 'user@host'
     });
 
     // First call closes the orphan

@@ -1,20 +1,15 @@
 // ABOUTME: Detects crashed/orphaned sessions (START without END) and auto-closes them
-// ABOUTME: Marks orphaned sessions with [Abnormal End] flag for visibility
+// ABOUTME: Marks orphaned sessions with [Abnormal End] flag; no token/cost data available for these
 
 import { parseStatsFile } from './stats-parser.js';
 import { appendRow, getMachineId } from './stats-writer.js';
 import { calculateDuration } from './formatters.js';
 import type { SessionRow } from '../types/index.js';
 
-/**
- * Detect orphaned sessions (START without END) and close them with [Abnormal End]
- * Returns array of sessions that were closed
- */
 export function detectAndCloseOrphans(filePath: string): SessionRow[] {
   const stats = parseStatsFile(filePath);
   const closedOrphans: SessionRow[] = [];
 
-  // Group rows by sessionId
   const sessionIds = new Set(stats.rows.map(r => r.sessionId));
 
   for (const sessionId of sessionIds) {
@@ -23,7 +18,6 @@ export function detectAndCloseOrphans(filePath: string): SessionRow[] {
     const hasEnd = sessionRows.some(r => r.event === 'END');
 
     if (hasStart && !hasEnd) {
-      // Found orphan - get the START row to extract details
       const startRow = sessionRows.find(r => r.event === 'START')!;
 
       const endRow: SessionRow = {
@@ -31,13 +25,15 @@ export function detectAndCloseOrphans(filePath: string): SessionRow[] {
         project: startRow.project,
         event: 'END',
         timestamp: new Date().toISOString(),
-        model: startRow.model,
         duration: calculateDuration(startRow.timestamp, new Date().toISOString()),
-        claudeTime: null,
-        cost: null,
-        tokens: null,
+        models: [],
+        apiMessages: null,
+        userMessages: null,
+        toolCalls: null,
+        subagentCount: null,
+        cacheHitRate: null,
         flags: '[Abnormal End]',
-        machineId: startRow.machineId || getMachineId()
+        machineId: startRow.machineId || getMachineId(),
       };
 
       appendRow(filePath, endRow);
