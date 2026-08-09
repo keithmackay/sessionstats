@@ -127,13 +127,14 @@ async function buildHooks() {
     console.log('  ✓ .claude-plugin/plugin.json copied to plugin/');
   }
 
-  // Copy commands directory to plugin
+  // Copy commands directory to plugin (remove first so stale/deleted commands don't linger)
   const commandsSrc = path.join(rootDir, 'commands');
   const commandsDest = path.join(pluginDir, 'commands');
   if (fs.existsSync(commandsSrc)) {
-    if (!fs.existsSync(commandsDest)) {
-      fs.mkdirSync(commandsDest, { recursive: true });
+    if (fs.existsSync(commandsDest)) {
+      fs.rmSync(commandsDest, { recursive: true, force: true });
     }
+    fs.mkdirSync(commandsDest, { recursive: true });
     for (const file of fs.readdirSync(commandsSrc)) {
       fs.copyFileSync(
         path.join(commandsSrc, file),
