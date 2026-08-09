@@ -78,12 +78,23 @@ function aggregateByTag(scanRoots, tag) {
         continue;
       }
       const endRows = stats.rows.filter((r) => r.event === "END");
+      const byModel = /* @__PURE__ */ new Map();
+      for (const row of endRows) {
+        for (const m of row.models) {
+          const entry2 = byModel.get(m.model) ?? { cost: 0, tokens: 0 };
+          entry2.cost += m.cost ?? 0;
+          entry2.tokens += (m.input ?? 0) + (m.output ?? 0) + (m.cacheRead ?? 0) + (m.cacheWrite ?? 0);
+          byModel.set(m.model, entry2);
+        }
+      }
+      const models = Array.from(byModel.entries()).map(([model, v]) => ({ model, ...v }));
       projects.push({
         projectName: config.projectName,
         tags,
         cost: endRows.reduce((s, r) => s + rowCost(r), 0),
         tokens: endRows.reduce((s, r) => s + rowTokens(r), 0),
-        sessions: endRows.length
+        sessions: endRows.length,
+        models
       });
     }
   }
@@ -105,6 +116,9 @@ function printReport() {
   console.log("=".repeat(60));
   for (const p of result.projects) {
     console.log(`  ${p.projectName.padEnd(24)} sessions:${p.sessions.toString().padStart(4)}  cost:$${p.cost.toFixed(2)}`);
+    for (const m of p.models) {
+      console.log(`    \u21B3 ${m.model.padEnd(28)} cost:$${m.cost.toFixed(2)}  tokens:${m.tokens.toLocaleString()}`);
+    }
   }
   console.log("-".repeat(60));
   console.log(`  TOTAL cost: $${result.totalCost.toFixed(2)}  tokens: ${result.totalTokens.toLocaleString()}`);
