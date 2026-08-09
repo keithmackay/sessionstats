@@ -159,7 +159,7 @@ cd sessionstats
 # Install dependencies
 npm install
 
-# Run tests (29 unit tests)
+# Run tests (61 unit tests)
 npm test
 
 # Build hooks
