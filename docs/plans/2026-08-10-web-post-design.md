@@ -1,7 +1,7 @@
 # sessionstats plugin — Web posting implementation
 
 Date: 2026-08-10
-Status: Approved, ready for implementation planning
+Status: Revised after critical-design-review round 1 — ready for implementation planning
 
 ## Background
 
@@ -32,6 +32,21 @@ if (config.postToWeb) {
 ```
 START rows are never posted — the website's report only aggregates `END` rows (per `sessionstats-web`'s `lib/session-record-aggregation.ts`, which filters to `event === 'END'`), so posting START rows would add cost/token-less noise with no reporting value.
 
+**Second wiring point — orphan-closed sessions** (`src/hooks/session-start.ts`, resolved forced-decision from critical-design-review round 1): `src/lib/orphan-detector.ts`'s `detectAndCloseOrphans` is a second, independent producer of END `SessionRow`s (auto-closes crashed sessions with `flags: '[Abnormal End]'`), called from `session-start.ts` and bypassing `session-end.ts` entirely. Without also wiring this path, a crashed session in a `postToWeb`-enabled project would be recorded locally but never sent to the website. `detectAndCloseOrphans`'s signature is left unchanged (keeps it free of web-posting concerns, consistent with its current single responsibility) — instead, `session-start.ts` (which already has `config`/`projectName` in scope at the call site) loops over the function's existing return value:
+
+```typescript
+const closedOrphans = detectAndCloseOrphans(statsPath);
+if (closedOrphans.length > 0) {
+  console.error(`[sessionstats] Closed ${closedOrphans.length} orphaned session(s)`);
+  if (config.postToWeb) {
+    for (const orphan of closedOrphans) {
+      await postSessionToWeb(orphan, projectName, config.tags);
+    }
+  }
+}
+```
+This replaces the existing `if (closedOrphans.length > 0) { console.error(...) }` block in `sessionStartHook`, adding the posting loop inside it using the same `postSessionToWeb` function already designed above — no new module needed.
+
 No changes needed on the website side — `POST /api/sessions` already accepts exactly this payload shape (`app/api/sessions/route.ts`, unchanged).
 
 ## Verified assumptions
@@ -48,3 +63,7 @@ No changes needed on the website side — `POST /api/sessions` already accepts e
 ## Known issues / deferred
 
 - No retry/queueing for failed posts (best-effort only, matches the original design's explicit deferral of this in `2026-08-09-sessionstats-rebuild-design.md`'s Known Issues section). If a post fails, the session is still recorded locally (source of truth) and simply never reaches the website — accepted as out of scope, consistent with prior precedent in this project.
+
+## Review history
+
+- **critical-design-review round 1** (`docs/criticalreviews/2026-08-10-web-post-design-critical-review-1.md`): found the design only wired `session-end.ts`, missing a second END-row producer (`orphan-detector.ts`, via `session-start.ts`) — meaning crashed sessions would never post to the web even with `postToWeb: true`. Resolved above — `session-start.ts` now also posts each closed orphan, reusing `postSessionToWeb`.
