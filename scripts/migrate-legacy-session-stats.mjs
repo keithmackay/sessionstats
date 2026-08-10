@@ -96,7 +96,7 @@ function migrateProject(projectDir) {
     rowCount: rows.length,
     willWriteConfig: !configExists,
     willWriteJson: !jsonExists,
-    willDeleteCsv: true,
+    willDeleteCsv: !jsonExists,
   };
 
   if (!CONFIRM) return plan;
@@ -123,9 +123,13 @@ function migrateProject(projectDir) {
     if (!Array.isArray(readBack.rows) || readBack.rows.length !== rows.length) {
       throw new Error(`Readback verification failed for ${jsonPath}`);
     }
-  }
 
-  fs.unlinkSync(csvPath);
+    // Only delete the source CSV once its data has actually been migrated into the JSON above.
+    // If .sessionstats/session_stats.json already existed (e.g. a live hook wrote it after
+    // this plugin was installed but before this script ran), deleting the CSV here would
+    // silently discard its history instead of migrating it — leave it in place instead.
+    fs.unlinkSync(csvPath);
+  }
 
   return plan;
 }
