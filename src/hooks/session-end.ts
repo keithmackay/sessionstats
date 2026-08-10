@@ -9,7 +9,6 @@ import { appendRow, getMachineId } from '../lib/stats-writer.js';
 import { calculateDuration } from '../lib/formatters.js';
 import { parseSessionTranscript } from '../lib/token-engine.js';
 import { loadOrCreateProjectConfig } from '../lib/project-config.js';
-import { postSessionToWeb } from '../lib/web-post.js';
 
 async function sessionEndHook(input: HookInput): Promise<void> {
   const statsPath = path.join(input.cwd, '.sessionstats', 'session_stats.json');
@@ -51,9 +50,8 @@ async function sessionEndHook(input: HookInput): Promise<void> {
     console.error('[sessionstats] Error recording session end:', error);
   }
 
-  if (config.postToWeb) {
-    await postSessionToWeb(endRow, projectName, config.tags);
-  }
+  // config.tags / config.postToWeb are available here for the future web-upload phase (not implemented yet).
+  void config;
 
   const output: HookOutput = { continue: true, suppressOutput: true };
   console.log(JSON.stringify(output));

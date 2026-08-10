@@ -10,7 +10,7 @@ export function pluginConfigPath(): string {
 }
 
 function defaults(): PluginConfig {
-  return { websiteUrl: null, scanRoots: [path.join(os.homedir(), 'Projects')], apiKey: null };
+  return { websiteUrl: null, scanRoots: [path.join(os.homedir(), 'Projects')] };
 }
 
 export function loadPluginConfig(): PluginConfig {

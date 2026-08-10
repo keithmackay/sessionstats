@@ -27,3 +27,5 @@ coverage/
 
 # Worktrees
 .worktrees/
+
+.sessionstats/

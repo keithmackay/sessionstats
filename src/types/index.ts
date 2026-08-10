@@ -65,5 +65,4 @@ export interface ProjectConfig {
 export interface PluginConfig {
   websiteUrl: string | null;
   scanRoots: string[];
-  apiKey: string | null;
 }
