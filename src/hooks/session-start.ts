@@ -7,6 +7,7 @@ import type { HookInput, HookOutput, SessionRow } from '../types/index.js';
 import { appendRow, getMachineId } from '../lib/stats-writer.js';
 import { detectAndCloseOrphans } from '../lib/orphan-detector.js';
 import { loadOrCreateProjectConfig, ensureGitignoreEntry } from '../lib/project-config.js';
+import { postSessionToWeb } from '../lib/web-post.js';
 
 async function sessionStartHook(input: HookInput): Promise<void> {
   const statsPath = path.join(input.cwd, '.sessionstats', 'session_stats.json');
@@ -19,6 +20,11 @@ async function sessionStartHook(input: HookInput): Promise<void> {
     const closedOrphans = detectAndCloseOrphans(statsPath);
     if (closedOrphans.length > 0) {
       console.error(`[sessionstats] Closed ${closedOrphans.length} orphaned session(s)`);
+      if (config.postToWeb) {
+        for (const orphan of closedOrphans) {
+          await postSessionToWeb(orphan, projectName, config.tags);
+        }
+      }
     }
   } catch (error) {
     console.error('[sessionstats] Error detecting orphans:', error);
