@@ -77,4 +77,13 @@ describe('postSessionToWeb', () => {
 
     await expect(postSessionToWeb(sampleRow, 'my-project', [])).resolves.toBeUndefined();
   });
+
+  it('does not throw when loadPluginConfig itself throws', async () => {
+    vi.spyOn(pluginConfigModule, 'loadPluginConfig').mockImplementation(() => {
+      throw new Error('config file is corrupt');
+    });
+
+    await expect(postSessionToWeb(sampleRow, 'my-project', [])).resolves.toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

@@ -7,13 +7,15 @@ import type { SessionRow } from '../types/index.js';
 const TIMEOUT_MS = 5000;
 
 export async function postSessionToWeb(row: SessionRow, project: string, tags: string[]): Promise<void> {
-  const config = loadPluginConfig();
-  if (!config.apiKey || !config.websiteUrl) return;
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  let timeout: ReturnType<typeof setTimeout> | undefined;
 
   try {
+    const config = loadPluginConfig();
+    if (!config.apiKey || !config.websiteUrl) return;
+
+    const controller = new AbortController();
+    timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
     const response = await fetch(`${config.websiteUrl}/api/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -27,6 +29,6 @@ export async function postSessionToWeb(row: SessionRow, project: string, tags: s
   } catch (error) {
     console.error('[sessionstats] Web post failed:', error);
   } finally {
-    clearTimeout(timeout);
+    if (timeout) clearTimeout(timeout);
   }
 }
