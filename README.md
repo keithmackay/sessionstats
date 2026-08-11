@@ -4,12 +4,12 @@ Auto stats tracker plugin (total aggregated time/cost/tokens per Claude Code pro
 
 ## Description
 
-sessionstats is a Claude Code marketplace plugin that automatically tracks session statistics using lifecycle hooks. When a Claude session starts, the plugin records the project name, timestamp, and session ID. When a session ends, it captures end time, calculates duration, and computes cost/token metrics by parsing the session transcript directly against an internal pricing table (no external CLI dependency). All statistics are stored per-project in `.sessionstats/session_stats.json`, with `.sessionstats/session_stats.md` regenerated from it as a human-readable view.
+sessionstats is a Claude Code marketplace plugin that automatically tracks session statistics using lifecycle hooks. When a Claude session starts, the plugin records the project name, timestamp, and session ID. When a session ends, it captures end time, calculates duration, and computes cost/token metrics by parsing the session transcript directly against an internal pricing table. All statistics are stored per-project in `.sessionstats/session_stats.json`, with `.sessionstats/session_stats.md` regenerated from it as a human-readable view.
 
 **Key Features:**
 - **Automatic tracking** - Hooks fire on session lifecycle events, no manual commands needed
 - **Per-project stats** - Each project maintains its own `.sessionstats/` folder with JSON source-of-truth data
-- **Direct transcript parsing** - Cost and token counts are computed from the session transcript with a built-in pricing table, no `ccusage` dependency
+- **Direct transcript parsing** - Cost and token counts are computed from the session transcript with a built-in pricing table
 - **Per-model breakdown** - Stats and reports break down cost/tokens by model
 - **Tagging** - Projects can carry multiple tags for grouping and cross-project aggregation
 - **Multi-user support** - Machine ID field enables team collaboration with git merge-friendly append-only data
@@ -96,7 +96,7 @@ sessionstats uses Claude Code's hook system to intercept session lifecycle event
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ SessionEnd Hook                                             │
-│ ├─ Parse the session transcript directly (no ccusage)      │
+│ ├─ Parse the session transcript directly                   │
 │ ├─ Compute per-model cost/tokens via internal pricing      │
 │ ├─ Calculate duration from START timestamp                 │
 │ └─ Record END row with all metrics                         │
