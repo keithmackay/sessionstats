@@ -70,7 +70,7 @@ Once installed, the plugin works automatically:
 
 | Command | Purpose |
 |---------|---------|
-| `/session_setup` | Interactively confirm/edit this project's full config: project name, tags, user email, and the (not-yet-implemented) post-to-web intent |
+| `/session_setup` | Interactively confirm/edit this project's full config: project name, tags, user email, and whether this project posts to the configured website |
 | `/session_tags` | Quick edit of just this project's `tags`, leaving the rest of the config untouched |
 | `/session_stats` | Display this project's session statistics |
 | `/sessionstats_report` | Cross-project cost/token totals (with per-project and per-model breakdown), optionally filtered with `--tag <tag-name>` |
@@ -138,9 +138,33 @@ Example `session_stats.json` row (abridged):
 
 Each project's `.sessionstats/config.json` can carry any number of `tags` (set via `/session_setup` or quickly via `/session_tags`). `/sessionstats_report` scans the directories configured in `scanRoots` (via `/sessionstats_config`, default `~/Projects`) for `.sessionstats/` folders and aggregates cost/token totals across all of them, or just the ones matching a given `--tag`, with per-project and per-model breakdown.
 
-## Posting to a Website (planned, not yet implemented)
+## Posting to a Website
 
-`ProjectConfig.postToWeb` and the plugin-level `websiteUrl` (set via `/sessionstats_config`) record the *intent* to eventually push session data to a configured website for shared visibility. This upload mechanism does not exist yet -- setting these flags today has no effect beyond recording the setting.
+sessionstats can push each session's stats to a companion website ([sessionstats-web](https://github.com/keithmackay/sessionstats-web)) for shared, cross-machine reporting — useful for teams, or just to check your usage from a browser instead of the terminal.
+
+### Getting an API key
+
+1. Sign up for an account on your team's/your own sessionstats-web deployment (or run one locally — see that project's README).
+2. Once logged in, your **API key** is shown at the top of the `/report` page. Copy it.
+
+### Configuring the plugin
+
+Posting is opt-in at two levels — both must be set for anything to actually happen:
+
+1. **Plugin-wide** (once per machine): run `/sessionstats_config` and set:
+   - `websiteUrl` — where your sessionstats-web deployment is running (e.g. `https://sessionstats.yourteam.com`)
+   - `apiKey` — the key from your `/report` page
+   - `scanRoots` — unrelated to posting, used by `/sessionstats_report` (see above)
+2. **Per-project**: run `/session_setup` and turn on `postToWeb` for any project whose sessions should be posted. Projects default to `postToWeb: false` — nothing is posted anywhere until you explicitly opt a project in.
+
+If either `apiKey` or `websiteUrl` is unset, posting silently does nothing — sessions are still tracked locally exactly as before. A failed or slow post (network issue, website down) never blocks or breaks your session; it's a best-effort background step with a 5-second timeout, logged to stderr on failure. There's currently no retry — a session that fails to post stays only in your local `.sessionstats/session_stats.json`.
+
+### Using the website
+
+Once you've posted at least one session, the website's `/report` page shows:
+- Your API key (for pasting into other machines' configs)
+- Totals grouped by tag, then by project within each tag — so a project tagged `["team-infra", "epic-billing"]` shows up under both groups
+- A chronological list of every session posted to your account
 
 ### Flags
 
@@ -148,6 +172,39 @@ Each project's `.sessionstats/config.json` can carry any number of `tags` (set v
 |------|---------|
 | `[Abnormal End]` | Session was closed by orphan detection (crash/force quit) |
 | `[No Start Found]` | END recorded without a matching START row |
+
+## Pricing
+
+Cost is computed locally from token counts using a built-in per-model pricing table (`src/lib/pricing.ts`) — USD per million tokens, broken out by input, output, cache read, and cache write:
+
+| Model | Input | Output | Cache Read | Cache Write |
+|-------|------:|-------:|-----------:|-------------:|
+| Claude Opus 4.5 | $15.00 | $75.00 | $1.50 | $18.75 |
+| Claude Sonnet 4.5 | $3.00 | $15.00 | $0.30 | $3.75 |
+| Claude Haiku 4.5 | $0.80 | $4.00 | $0.08 | $1.00 |
+
+An unrecognized model ID falls back to Opus-tier pricing (the most expensive tier), so an unexpected model never silently under-reports cost.
+
+**Update cadence:** this table is a static snapshot of [Anthropic's published pricing](https://www.anthropic.com/pricing) at the time it was last edited — it is not fetched live and does not update itself. If Anthropic changes pricing or ships a new model, the table in `src/lib/pricing.ts` needs a manual edit and a new release; until then, historical and new cost figures alike will reflect whatever's in the table at the time.
+
+## Privacy: What's Tracked (and What Isn't)
+
+sessionstats is designed to track *usage*, not *content*. Every session record (`.sessionstats/session_stats.json`, and the same shape if posted to a website) contains only:
+
+- **Token counts** — input, output, cache-read, cache-write, per model
+- **Computed cost** — derived from the token counts above, never sent anywhere separately
+- **Duration** — wall-clock time between session start and end
+- **Counts** — number of API messages, user messages, tool calls, and subagents
+- **Identifiers** — session ID, project name, tags, machine ID (`username@hostname`), timestamps
+- **Status flags** — e.g. `[Abnormal End]` if a session crashed
+
+**What is explicitly NOT tracked:**
+
+- **Prompt or query content** — nothing you type, and nothing Claude responds with, is ever read, stored, or transmitted. The transcript is parsed only for its `usage` token counts and message/tool-call counts; the actual message text is never touched.
+- **File contents or paths** you worked with, beyond the project's own folder name.
+- **Per-turn or per-request processing time** — this is not a privacy choice, it's an availability one: Claude Code's CLI doesn't expose per-turn timing data anywhere sessionstats can read it (confirmed against real transcript JSONL — the closest available field, `message.diagnostics`, only carries a cache-miss reason, no timing). The only timing data available is the START/END session timestamps, which is what `duration` is computed from.
+
+If you post to a website, this exact same data (and nothing more) is what gets sent — see [Posting to a Website](#posting-to-a-website) above for the full payload shape.
 
 ## Development
 
@@ -159,7 +216,7 @@ cd sessionstats
 # Install dependencies
 npm install
 
-# Run tests (61 unit tests)
+# Run tests (67 unit tests)
 npm test
 
 # Build hooks

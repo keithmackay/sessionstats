@@ -22,7 +22,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/keithmackay/cc-session-track"
+    "url": "https://github.com/keithmackay/sessionstats"
   },
   "keywords": [
     "claude",
