@@ -1,0 +1,15 @@
+{
+  "name": "sessionstats",
+  "description": "Auto stats tracker plugin (total aggregated time/cost/tokens per Claude Code project)",
+  "owner": {
+    "name": "Keith MacKay",
+    "url": "https://github.com/keithmackay"
+  },
+  "plugins": [
+    {
+      "name": "sessionstats",
+      "source": "./plugin",
+      "description": "Auto stats tracker plugin (total aggregated time/cost/tokens per Claude Code project)"
+    }
+  ]
+}
