@@ -124,6 +124,12 @@ Include every user prompt from the extract-prompts output, organized chronologic
 
 ---
 
+## Retroactive Learning/Improvements
+
+[Reviewing the full history above with hindsight, identify things that would be done differently knowing what we know now — see the "Retroactive Learning/Improvements" guidance below for what belongs here.]
+
+---
+
 *Documentation generated with Claude Code assistance.*
 ```
 
@@ -160,6 +166,7 @@ Include every user prompt from the extract-prompts output, organized chronologic
 ```
 
 5. Update the **Prompt History** section with any new prompts not already documented.
+6. If the existing file has no **Retroactive Learning/Improvements** section, add one at the end (see guidance below). If it already has one, review it against the changes since it was last updated and append any new items — don't rewrite items already there unless they've been directly superseded.
 
 ## Step 4: Write the File
 
@@ -169,6 +176,17 @@ If the docs/ directory doesn't exist, create it first:
 ```bash
 mkdir -p docs
 ```
+
+## Retroactive Learning/Improvements
+
+This section is hindsight, not a changelog — don't restate what Key Technical Decisions already covers. For each item, name the specific commit/phase it relates to, what you'd do differently knowing the full history, and why (what pain, rework, or bug it would have avoided). Look for:
+
+- **Rework signals**: a feature built one way, then reworked or reverted later — what would have gotten it right the first time?
+- **Repeated fixes**: the same file/area patched multiple times for related bugs — a sign the underlying design needed to change, not just the symptom.
+- **Decisions later regretted**: a documented decision whose rationale was later overridden or worked around elsewhere.
+- **Missing tests/docs that would have caught a bug earlier** — call out the specific failure it would have caught.
+
+If nothing in the history qualifies (e.g. a young or small project), write "Nothing rises to the level of a retroactive lesson yet" rather than manufacturing filler items.
 
 ## Guidelines
 

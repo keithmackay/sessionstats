@@ -2,7 +2,7 @@
 
 // src/hooks/session-start.ts
 import { stdin } from "process";
-import path3 from "path";
+import path4 from "path";
 
 // src/lib/stats-writer.ts
 import fs2 from "fs";
@@ -174,16 +174,62 @@ function ensureGitignoreEntry(projectDir) {
 `);
 }
 
+// src/lib/plugin-config.ts
+import fs4 from "fs";
+import path3 from "path";
+import os2 from "os";
+function pluginConfigPath() {
+  return path3.join(os2.homedir(), ".claude", "sessionstats", "config.json");
+}
+function defaults() {
+  return { websiteUrl: null, scanRoots: [path3.join(os2.homedir(), "Projects")], apiKey: null };
+}
+function loadPluginConfig() {
+  const configPath = pluginConfigPath();
+  if (!fs4.existsSync(configPath)) return defaults();
+  return { ...defaults(), ...JSON.parse(fs4.readFileSync(configPath, "utf-8")) };
+}
+
+// src/lib/web-post.ts
+var TIMEOUT_MS = 5e3;
+async function postSessionToWeb(row, project, tags) {
+  let timeout;
+  try {
+    const config = loadPluginConfig();
+    if (!config.apiKey || !config.websiteUrl) return;
+    const controller = new AbortController();
+    timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const response = await fetch(`${config.websiteUrl}/api/sessions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ apiKey: config.apiKey, project, tags, sessions: [row] }),
+      signal: controller.signal
+    });
+    if (!response.ok) {
+      console.error(`[sessionstats] Web post failed: HTTP ${response.status}`);
+    }
+  } catch (error) {
+    console.error("[sessionstats] Web post failed:", error);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 // src/hooks/session-start.ts
 async function sessionStartHook(input) {
-  const statsPath = path3.join(input.cwd, ".sessionstats", "session_stats.json");
-  const projectName = path3.basename(input.cwd);
+  const statsPath = path4.join(input.cwd, ".sessionstats", "session_stats.json");
+  const projectName = path4.basename(input.cwd);
   const config = loadOrCreateProjectConfig(input.cwd);
   ensureGitignoreEntry(input.cwd);
   try {
     const closedOrphans = detectAndCloseOrphans(statsPath);
     if (closedOrphans.length > 0) {
       console.error(`[sessionstats] Closed ${closedOrphans.length} orphaned session(s)`);
+      if (config.postToWeb) {
+        for (const orphan of closedOrphans) {
+          await postSessionToWeb(orphan, projectName, config.tags);
+        }
+      }
     }
   } catch (error) {
     console.error("[sessionstats] Error detecting orphans:", error);

@@ -2,8 +2,7 @@
 
 // src/scripts/extract-prompts.ts
 import fs from "fs";
-import path from "path";
-import os from "os";
+import path2 from "path";
 
 // src/lib/prompt-extractor.ts
 function extractPrompts(lines) {
@@ -53,18 +52,22 @@ function stripSystemTags(content) {
   return content.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, "").replace(/<command-message>[\s\S]*?<\/command-message>/g, "").replace(/<command-name>[\s\S]*?<\/command-name>/g, "");
 }
 
-// src/scripts/extract-prompts.ts
+// src/lib/transcript-dir.ts
+import path from "path";
+import os from "os";
 function getProjectTranscriptDir(projectDir2) {
   const encoded = projectDir2.replace(/[/.]/g, "-");
   return path.join(os.homedir(), ".claude", "projects", encoded);
 }
+
+// src/scripts/extract-prompts.ts
 function extractAllPrompts(projectDir2) {
   const transcriptDir = getProjectTranscriptDir(projectDir2);
   if (!fs.existsSync(transcriptDir)) {
     console.error(`No Claude Code transcripts found for ${projectDir2}`);
     process.exit(1);
   }
-  const jsonlFiles = fs.readdirSync(transcriptDir).filter((f) => f.endsWith(".jsonl")).map((f) => path.join(transcriptDir, f));
+  const jsonlFiles = fs.readdirSync(transcriptDir).filter((f) => f.endsWith(".jsonl")).map((f) => path2.join(transcriptDir, f));
   if (jsonlFiles.length === 0) {
     console.error("No session transcripts found.");
     process.exit(1);

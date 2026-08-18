@@ -2,7 +2,7 @@
 
 // src/hooks/session-end.ts
 import { stdin } from "process";
-import path4 from "path";
+import path5 from "path";
 
 // src/lib/stats-parser.ts
 import fs from "fs";
@@ -266,10 +266,51 @@ function writeProjectConfig(projectDir, config) {
   fs4.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", "utf-8");
 }
 
+// src/lib/plugin-config.ts
+import fs5 from "fs";
+import path4 from "path";
+import os2 from "os";
+function pluginConfigPath() {
+  return path4.join(os2.homedir(), ".claude", "sessionstats", "config.json");
+}
+function defaults() {
+  return { websiteUrl: null, scanRoots: [path4.join(os2.homedir(), "Projects")], apiKey: null };
+}
+function loadPluginConfig() {
+  const configPath = pluginConfigPath();
+  if (!fs5.existsSync(configPath)) return defaults();
+  return { ...defaults(), ...JSON.parse(fs5.readFileSync(configPath, "utf-8")) };
+}
+
+// src/lib/web-post.ts
+var TIMEOUT_MS = 5e3;
+async function postSessionToWeb(row, project, tags) {
+  let timeout;
+  try {
+    const config = loadPluginConfig();
+    if (!config.apiKey || !config.websiteUrl) return;
+    const controller = new AbortController();
+    timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const response = await fetch(`${config.websiteUrl}/api/sessions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ apiKey: config.apiKey, project, tags, sessions: [row] }),
+      signal: controller.signal
+    });
+    if (!response.ok) {
+      console.error(`[sessionstats] Web post failed: HTTP ${response.status}`);
+    }
+  } catch (error) {
+    console.error("[sessionstats] Web post failed:", error);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 // src/hooks/session-end.ts
 async function sessionEndHook(input) {
-  const statsPath = path4.join(input.cwd, ".sessionstats", "session_stats.json");
-  const projectName = path4.basename(input.cwd);
+  const statsPath = path5.join(input.cwd, ".sessionstats", "session_stats.json");
+  const projectName = path5.basename(input.cwd);
   const endTime = (/* @__PURE__ */ new Date()).toISOString();
   const startRow = findStartRow(statsPath, input.session_id);
   const config = loadOrCreateProjectConfig(input.cwd);
@@ -300,6 +341,9 @@ async function sessionEndHook(input) {
     appendRow(statsPath, endRow);
   } catch (error) {
     console.error("[sessionstats] Error recording session end:", error);
+  }
+  if (config.postToWeb) {
+    await postSessionToWeb(endRow, projectName, config.tags);
   }
   const output = { continue: true, suppressOutput: true };
   console.log(JSON.stringify(output));

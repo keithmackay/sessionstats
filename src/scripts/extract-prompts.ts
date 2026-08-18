@@ -3,14 +3,8 @@
 
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import { extractPrompts, formatPromptsMarkdown } from '../lib/prompt-extractor.js';
-
-function getProjectTranscriptDir(projectDir: string): string {
-  // Claude Code encodes project paths by replacing / and . with -
-  const encoded = projectDir.replace(/[/.]/g, '-');
-  return path.join(os.homedir(), '.claude', 'projects', encoded);
-}
+import { getProjectTranscriptDir } from '../lib/transcript-dir.js';
 
 function extractAllPrompts(projectDir: string): void {
   const transcriptDir = getProjectTranscriptDir(projectDir);
