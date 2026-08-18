@@ -24,11 +24,11 @@ sessionstats is a Claude Code marketplace plugin that automatically tracks sessi
 
 ## Installation
 
-`/plugin marketplace add` and `/plugin install` are slash commands — run them inside an active Claude Code session, not in your shell.
+sessionstats is distributed through [mackayi](https://github.com/keithmackay/mackayi), Keith MacKay's Claude Code plugin marketplace — not through its own marketplace file. `/plugin marketplace add` and `/plugin install` are slash commands — run them inside an active Claude Code session, not in your shell.
 
 ```
-/plugin marketplace add keithmackay/sessionstats
-/plugin install sessionstats@sessionstats
+/plugin marketplace add keithmackay/mackayi
+/plugin install sessionstats@mackayi
 ```
 
 If the install summary says `Run /reload-plugins to activate.`, run that command too.
@@ -36,7 +36,7 @@ If the install summary says `Run /reload-plugins to activate.`, run that command
 For non-interactive installs (e.g. a setup script), the marketplace must already be known — either added once via `/plugin marketplace add` in a prior session, or declared in `.claude/settings.json` under [`extraKnownMarketplaces`](https://code.claude.com/docs/en/settings#extraknownmarketplaces) — then install with the shell CLI:
 
 ```bash
-claude plugin install sessionstats@sessionstats --scope user
+claude plugin install sessionstats@mackayi --scope user
 ```
 
 ## Usage
