@@ -75,7 +75,8 @@ Once installed, the plugin works automatically:
 | `/session_stats`       | Display this project's session statistics                                                                                                       |
 | `/sessionstats_report` | Cross-project cost/token totals (with per-project and per-model breakdown), optionally filtered with `--tag <tag-name>`                         |
 | `/sessionstats_config` | Set plugin-level config: `websiteUrl` and `scanRoots` (used by `/sessionstats_report` to find `.sessionstats/` folders)                         |
-| `/build_story`         | Generate or update `docs/BUILD_STORY.md` documenting project development history                                                                |
+| `/sessionstats_rebuild` | Rebuild `.sessionstats/session_stats.json` from this project's raw Claude Code transcripts — recovers history for projects that predate live tracking |
+| `/build_story`         | Generate or update `docs/BUILD_STORY.md` documenting project development history, including a Retroactive Learning/Improvements section              |
 
 ## How It Works
 
@@ -216,7 +217,7 @@ cd sessionstats
 # Install dependencies
 npm install
 
-# Run tests (67 unit tests)
+# Run tests (73 unit tests)
 npm test
 
 # Build hooks
@@ -230,7 +231,7 @@ sessionstats/
 ├── src/
 │   ├── hooks/           # SessionStart/SessionEnd hook scripts
 │   ├── lib/             # Core logic (stats-parser, stats-writer, orphan-detector, formatters, token-engine, pricing)
-│   ├── scripts/         # CLI scripts (show-stats, report, extract-prompts)
+│   ├── scripts/         # CLI scripts (show-stats, report, extract-prompts, rebuild-stats)
 │   └── types/           # TypeScript interfaces
 ├── plugin/              # Built distribution for marketplace
 ├── tests/unit/          # Unit tests (vitest)
