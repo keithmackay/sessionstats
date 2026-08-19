@@ -83,7 +83,6 @@ Once installed, the plugin works automatically:
 | `/sessionstats_report` | Cross-project cost/token totals (with per-project and per-model breakdown), optionally filtered with `--tag <tag-name>`                         |
 | `/sessionstats_config` | Set plugin-level config: `websiteUrl` and `scanRoots` (used by `/sessionstats_report` to find `.sessionstats/` folders)                         |
 | `/sessionstats_rebuild` | Rebuild `.sessionstats/session_stats.json` from this project's raw Claude Code transcripts — recovers history for projects that predate live tracking |
-| `/build_story`         | Generate or update `docs/BUILD_STORY.md` documenting project development history, including a Retroactive Learning/Improvements section              |
 
 ## How It Works
 
