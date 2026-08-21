@@ -1,6 +1,6 @@
 {
   "name": "sessionstats",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Auto stats tracker plugin (total aggregated time/cost/tokens per Claude Code project)",
   "type": "module",
   "scripts": {
