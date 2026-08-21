@@ -262,6 +262,10 @@ Contributions are welcome! Please:
 4. Ensure all tests pass (`npm test`)
 5. Submit a pull request
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
+
 ## License
 
 MIT
