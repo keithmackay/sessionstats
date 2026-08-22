@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+- Document mackayi marketplace installation in README
 - Add :version command for sessionstats, reporting installed version and a best-effort GitHub update check
 - Add Changelog section to README linking CHANGELOG.md
 ### Added

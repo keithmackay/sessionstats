@@ -24,12 +24,14 @@ sessionstats is a Claude Code marketplace plugin that automatically tracks sessi
 
 ## Installation
 
-sessionstats is distributed through [mackayi](https://github.com/keithmackay/mackayi), Keith MacKay's Claude Code plugin marketplace — not through its own marketplace file. `/plugin marketplace add` and `/plugin install` are slash commands — run them inside an active Claude Code session, not in your shell.
+### From the mackayi marketplace (recommended)
 
 ```
 /plugin marketplace add keithmackay/mackayi
 /plugin install sessionstats@mackayi
 ```
+
+sessionstats is distributed through [mackayi](https://github.com/keithmackay/mackayi), Keith MacKay's Claude Code plugin marketplace — not through its own marketplace file. `/plugin marketplace add` and `/plugin install` are slash commands — run them inside an active Claude Code session, not in your shell.
 
 If the install summary says `Run /reload-plugins to activate.`, run that command too.
 
