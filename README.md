@@ -79,12 +79,12 @@ Once installed, the plugin works automatically:
 
 | Command                | Purpose                                                                                                                                         |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/session_setup`       | Interactively confirm/edit this project's full config: project name, tags, user email, and whether this project posts to the configured website |
-| `/session_tags`        | Quick edit of just this project's `tags`, leaving the rest of the config untouched                                                              |
+| `/session_setup`       | Interactively confirm/edit this project's full config: project name, tags, user email, and whether this project posts to the configured website. Supports `--dry-run` to preview the config that would be written. |
+| `/session_tags`        | Quick edit of just this project's `tags`, leaving the rest of the config untouched. Supports `--dry-run` to preview the tag change.              |
 | `/session_stats`       | Display this project's session statistics                                                                                                       |
 | `/sessionstats_report` | Cross-project cost/token totals (with per-project and per-model breakdown), optionally filtered with `--tag <tag-name>`                         |
-| `/sessionstats_config` | Set plugin-level config: `websiteUrl` and `scanRoots` (used by `/sessionstats_report` to find `.sessionstats/` folders)                         |
-| `/sessionstats_rebuild` | Rebuild `.sessionstats/session_stats.json` from this project's raw Claude Code transcripts — recovers history for projects that predate live tracking |
+| `/sessionstats_config` | Set plugin-level config: `websiteUrl` and `scanRoots` (used by `/sessionstats_report` to find `.sessionstats/` folders). Supports `--dry-run` to preview the config that would be written. |
+| `/sessionstats_rebuild` | Rebuild `.sessionstats/session_stats.json` from this project's raw Claude Code transcripts — recovers history for projects that predate live tracking. Supports `--dry-run` to preview what would be rebuilt without writing anything. |
 
 ## How It Works
 

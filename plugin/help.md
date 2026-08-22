@@ -20,11 +20,20 @@ COMMANDS
                                       projects, optionally filtered by tag
   /sessionstats:session_setup        Interactively confirm or edit this
                                       project's sessionstats configuration
+                                      (supports --dry-run to preview)
   /sessionstats:session_tags         Interactively review or update this
                                       project's tags only
+                                      (supports --dry-run to preview)
   /sessionstats:sessionstats_config  Interactively set plugin-level config
                                       (websiteUrl, apiKey, scanRoots)
+                                      (supports --dry-run to preview)
   /sessionstats:sessionstats_rebuild Rebuild session_stats.json from raw
                                       Claude Code transcripts, independent
                                       of hook-recorded data
+                                      (supports --dry-run to preview)
   /sessionstats:help                 Show this message and exit
+
+  --dry-run
+    Pass to session_setup, session_tags, sessionstats_config, or
+    sessionstats_rebuild to preview what would be written/changed
+    without writing any files.

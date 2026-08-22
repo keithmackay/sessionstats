@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Document mackayi marketplace installation in README
 - Add :version command for sessionstats, reporting installed version and a best-effort GitHub update check
 - Add Changelog section to README linking CHANGELOG.md
+- Add `--dry-run` support to `/session_setup`, `/session_tags`, `/sessionstats_config`, and `/sessionstats_rebuild` — previews what would be written/changed without touching any files
 ### Added
 ### Changed
 ### Deprecated

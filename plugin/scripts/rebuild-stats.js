@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
+// src/scripts/rebuild-stats.ts
+import path5 from "path";
+
 // src/lib/rebuild.ts
-import fs3 from "fs";
+import fs4 from "fs";
 import path4 from "path";
 
 // src/lib/transcript-dir.ts
@@ -144,10 +147,52 @@ function parseSessionTranscript(transcriptPath) {
 }
 
 // src/lib/stats-parser.ts
+import fs2 from "fs";
 var SCHEMA_VERSION = 1;
+function parseStatsFile(filePath) {
+  if (!fs2.existsSync(filePath)) {
+    return { schemaVersion: SCHEMA_VERSION, totals: createEmptyTotals(), rows: [] };
+  }
+  const raw = JSON.parse(fs2.readFileSync(filePath, "utf-8"));
+  const rows = raw.rows ?? [];
+  return { schemaVersion: raw.schemaVersion ?? SCHEMA_VERSION, totals: computeTotals(rows), rows };
+}
+function createEmptyTotals() {
+  return { sessions: 0, totalDuration: "00:00:00", totalCost: 0, totalTokens: 0 };
+}
+function rowCost(row) {
+  return row.models.reduce((sum, m) => sum + (m.cost ?? 0), 0);
+}
+function rowTokens(row) {
+  return row.models.reduce((sum, m) => sum + (m.input ?? 0) + (m.output ?? 0) + (m.cacheRead ?? 0) + (m.cacheWrite ?? 0), 0);
+}
+function computeTotals(rows) {
+  const endRows = rows.filter((r) => r.event === "END");
+  let totalDurationMs = 0;
+  let totalCost = 0;
+  let totalTokens = 0;
+  for (const row of endRows) {
+    if (row.duration) totalDurationMs += parseTimeToMs(row.duration);
+    totalCost += rowCost(row);
+    totalTokens += rowTokens(row);
+  }
+  return { sessions: endRows.length, totalDuration: formatMsToTime(totalDurationMs), totalCost, totalTokens };
+}
+function parseTimeToMs(time) {
+  const parts = time.split(":").map(Number);
+  if (parts.length === 3) return (parts[0] * 3600 + parts[1] * 60 + parts[2]) * 1e3;
+  return 0;
+}
+function formatMsToTime(ms) {
+  const totalSeconds = Math.floor(ms / 1e3);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor(totalSeconds % 3600 / 60);
+  const seconds = totalSeconds % 60;
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+}
 
 // src/lib/formatters.ts
-function formatMsToTime(ms) {
+function formatMsToTime2(ms) {
   const totalSeconds = Math.floor(ms / 1e3);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor(totalSeconds % 3600 / 60);
@@ -158,17 +203,17 @@ function calculateDuration(startISO, endISO) {
   const startMs = new Date(startISO).getTime();
   const endMs = new Date(endISO).getTime();
   const durationMs = Math.max(0, endMs - startMs);
-  return formatMsToTime(durationMs);
+  return formatMsToTime2(durationMs);
 }
 
 // src/lib/stats-writer.ts
-import fs2 from "fs";
+import fs3 from "fs";
 import path3 from "path";
-function writeStatsFile(filePath, rows2) {
-  const content = JSON.stringify({ schemaVersion: SCHEMA_VERSION, rows: rows2 }, null, 2) + "\n";
+function writeStatsFile(filePath, rows) {
+  const content = JSON.stringify({ schemaVersion: SCHEMA_VERSION, rows }, null, 2) + "\n";
   const dir = path3.dirname(filePath);
-  if (!fs2.existsSync(dir)) fs2.mkdirSync(dir, { recursive: true });
-  fs2.writeFileSync(filePath, content, "utf-8");
+  if (!fs3.existsSync(dir)) fs3.mkdirSync(dir, { recursive: true });
+  fs3.writeFileSync(filePath, content, "utf-8");
 }
 
 // src/lib/rebuild.ts
@@ -193,12 +238,12 @@ function firstAndLastTimestamps(content) {
 function rebuildSessionRows(projectDir2) {
   const transcriptDir2 = getProjectTranscriptDir(projectDir2);
   const projectName = path4.basename(projectDir2);
-  if (!fs3.existsSync(transcriptDir2)) return [];
-  const sessionFiles = fs3.readdirSync(transcriptDir2).filter((f) => f.endsWith(".jsonl")).map((f) => path4.join(transcriptDir2, f));
+  if (!fs4.existsSync(transcriptDir2)) return [];
+  const sessionFiles = fs4.readdirSync(transcriptDir2).filter((f) => f.endsWith(".jsonl")).map((f) => path4.join(transcriptDir2, f));
   const sessions = [];
   for (const filePath of sessionFiles) {
     const sessionId = path4.basename(filePath, ".jsonl");
-    const content = fs3.readFileSync(filePath, "utf-8");
+    const content = fs4.readFileSync(filePath, "utf-8");
     const timestamps = firstAndLastTimestamps(content);
     if (!timestamps) continue;
     const { first, last } = timestamps;
@@ -244,16 +289,37 @@ function rebuildSessionRows(projectDir2) {
   return sessions.flatMap((s) => [s.startRow, s.endRow]);
 }
 function rebuildStatsFile(projectDir2) {
-  const rows2 = rebuildSessionRows(projectDir2);
+  const rows = rebuildSessionRows(projectDir2);
   const statsPath = path4.join(projectDir2, ".sessionstats", "session_stats.json");
-  writeStatsFile(statsPath, rows2);
-  return rows2;
+  writeStatsFile(statsPath, rows);
+  return rows;
 }
 
 // src/scripts/rebuild-stats.ts
-var projectDir = process.argv[2] || process.cwd();
+var args = process.argv.slice(2);
+var dryRun = args.includes("--dry-run");
+var projectDir = args.find((a) => !a.startsWith("--")) || process.cwd();
 var transcriptDir = getProjectTranscriptDir(projectDir);
-var rows = rebuildStatsFile(projectDir);
-var sessionCount = rows.filter((r) => r.event === "END").length;
-console.log(`Scanned transcripts in ${transcriptDir}`);
-console.log(`Rebuilt .sessionstats/session_stats.json with ${sessionCount} session(s).`);
+if (dryRun) {
+  const statsPath = path5.join(projectDir, ".sessionstats", "session_stats.json");
+  const existing = parseStatsFile(statsPath);
+  const existingCount = existing.rows.length;
+  const rows = rebuildSessionRows(projectDir);
+  const sessionCount = rows.filter((r) => r.event === "END").length;
+  console.log(`[DRY RUN] Scanned transcripts in ${transcriptDir}`);
+  console.log(`[DRY RUN] Would rebuild session_stats.json from ${sessionCount} transcript(s), replacing ${existingCount} existing row(s).`);
+  console.log("[DRY RUN] No files were written.");
+  if (rows.length > 0) {
+    const sample = rows.slice(0, Math.min(4, rows.length));
+    console.log("\n[DRY RUN] Sample of what would be written:");
+    console.log(JSON.stringify(sample, null, 2));
+    if (rows.length > sample.length) {
+      console.log(`... and ${rows.length - sample.length} more row(s)`);
+    }
+  }
+} else {
+  const rows = rebuildStatsFile(projectDir);
+  const sessionCount = rows.filter((r) => r.event === "END").length;
+  console.log(`Scanned transcripts in ${transcriptDir}`);
+  console.log(`Rebuilt .sessionstats/session_stats.json with ${sessionCount} session(s).`);
+}

@@ -14,3 +14,20 @@ Interactively confirm or update each field with the user, showing current values
 4. **Post to web** (`postToWeb`) — currently `true`/`false`; ask whether this project's sessions should (eventually) be posted to the configured website. Explain that the actual upload isn't implemented yet — this just sets the intent.
 
 After confirming all four, write the updated JSON back to `.sessionstats/config.json`, preserving `schemaVersion`, and set `needsSetupConfirmation` to `false`. Confirm the saved values to the user.
+
+**`--dry-run`** — if the user passes `--dry-run` (or asks to preview the change), still walk through steps 1-4 and compute the resulting config object, but STOP before writing. Instead print something like:
+
+```
+[DRY RUN] Would write .sessionstats/config.json:
+{
+  "schemaVersion": 1,
+  "projectName": "...",
+  "tags": [...],
+  "userEmail": "...",
+  "postToWeb": true,
+  "needsSetupConfirmation": false
+}
+[DRY RUN] No files were written.
+```
+
+Then tell the user to re-run `/sessionstats:session_setup` without `--dry-run` to actually save it.

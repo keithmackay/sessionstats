@@ -6,12 +6,20 @@ This command reconstructs session history by scanning this project's Claude Code
 
 **This overwrites `.sessionstats/session_stats.json`** — any existing rows are discarded and replaced with what's reconstructed from the transcripts. Reconstructed rows are tagged with the flag `[Reconstructed]` and have `machineId: null` (the originating machine can't be recovered from a transcript alone). Confirm with the user before running if `.sessionstats/session_stats.json` already has non-trivial history, since this is not reversible from within the plugin (though the transcripts themselves are untouched, so re-running is idempotent).
 
+**`--dry-run`** — if the user passes `--dry-run` (or asks to preview/dry-run the rebuild), pass it through to the script instead of running the real rebuild. Nothing is written in this mode; the script prints how many transcripts it found, how many existing rows would be replaced, and a representative sample of the rows it would write instead.
+
 Run the rebuild script:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/plugin/scripts/rebuild-stats.js"
 ```
 
-The script reports how many sessions it found and rebuilt. If it reports zero sessions, tell the user no transcripts were found for this project directory — this can happen if the project was recently moved/renamed (Claude Code keys transcripts by absolute path).
+Or, for a dry-run preview:
 
-After rebuilding, suggest the user run `/session_stats` to view the reconstructed totals.
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/plugin/scripts/rebuild-stats.js" --dry-run
+```
+
+The script reports how many sessions it found and rebuilt (or, in `--dry-run` mode, would rebuild). If it reports zero sessions, tell the user no transcripts were found for this project directory — this can happen if the project was recently moved/renamed (Claude Code keys transcripts by absolute path).
+
+After a real rebuild, suggest the user run `/session_stats` to view the reconstructed totals. After a `--dry-run`, tell the user to re-run without `--dry-run` (and confirm) if the preview looks right.
