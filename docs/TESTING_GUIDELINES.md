@@ -32,7 +32,7 @@ cc-session-track follows a comprehensive testing strategy with multiple layers:
 ### 2. Widget Tests (UI Components)
 **What**: Test individual widgets and screens in isolation.
 **Tools**: Flutter's `flutter_test` package
-**Coverage Target**: 75% branch coverage minimum
+**Coverage Target**: 75% branch coverage minimum [CONFIRM: Test Coverage Requirements sets ≥80% for UI screens and widgets; which target applies?]
 
 **Examples**:
 - Screen rendering and state management
@@ -88,7 +88,7 @@ cc-session-track follows a comprehensive testing strategy with multiple layers:
    claude mcp add playwright npx @playwright/mcp@latest
    ```
 
-2. **Run app in debug mode**:
+2. **Run the app in debug mode**:
    ```bash
    flutter run -d chrome --web-port=8080
    # or
@@ -215,19 +215,22 @@ flutter test --coverage
 ```
 
 ### E2E Tests (Playwright)
-```bash
-# Start app in test mode
-flutter run -d chrome --web-port=8080
 
-# In another terminal, run Playwright tests
-npx playwright test
+1. Start the app in debug mode:
+   ```bash
+   flutter run -d chrome --web-port=8080
+   ```
+2. In another terminal, run the Playwright tests:
+   ```bash
+   # Run all tests
+   npx playwright test
 
-# Run specific test
-npx playwright test e2e/habit_creation_flow_test.ts
+   # Run specific test
+   npx playwright test test/e2e/habit_creation_flow_test.ts
 
-# Run in headed mode (see browser)
-npx playwright test --headed
-```
+   # Run in headed mode (see browser)
+   npx playwright test --headed
+   ```
 
 ---
 
@@ -245,8 +248,9 @@ npx playwright test --headed
 
 ### Mock Repositories
 - Use mock repositories for widget tests
-- Avoid network calls and real database operations in widget tests
+- Keep widget tests offline and off the real database: inject mock repositories in place of network calls and real database operations
 - Example: `MockPeepRepository`, `MockHabitRepository`
+- Assert on the widget's behavior, not on the values the mock returns (see "Testing mocked behavior" under Anti-Patterns to Avoid)
 
 ---
 
@@ -263,9 +267,9 @@ npx playwright test --headed
 ### Anti-Patterns to Avoid
 
 ❌ **Testing implementation details**: Test behavior, not internal structure
-❌ **Brittle tests**: Don't break from minor UI changes
+❌ **Brittle tests**: Write tests that keep passing through minor UI changes
 ❌ **Slow tests**: Keep unit tests under 100ms, widget tests under 1s
-❌ **Flaky tests**: No random timeouts or race conditions
+❌ **Flaky tests**: Wait on explicit conditions (e.g. `await page.waitForSelector('text=...')`) instead of fixed timeouts, and make each test independent of execution order to rule out race conditions
 ❌ **Testing mocked behavior**: Test real logic, not mock returns
 
 ---
