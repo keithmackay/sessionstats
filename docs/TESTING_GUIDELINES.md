@@ -2,8 +2,6 @@
 
 This document defines the testing strategy and requirements for cc-session-track development.
 
-> **Scope:** These guidelines describe a Flutter app (`flutter test`, widget tests, Playwright against `localhost:8080`). This repository, sessionstats, is a TypeScript project tested with Vitest (`npm test`, test files in `tests/unit/*.test.ts`), so the Flutter-specific tools, paths and commands below do not apply to it as written. [CONFIRM: is this the intended testing guide for sessionstats, or should it be replaced with a Vitest-specific guide?]
-
 ---
 
 ## Testing Pyramid
@@ -44,7 +42,7 @@ cc-session-track follows a comprehensive testing strategy with multiple layers:
 
 ### 3. End-to-End Tests (Full Flows)
 **What**: Test complete user workflows across the entire application.
-**Tools**: **Playwright**, in place of manual testing (see [When Implementation Plans Say "Manual Testing"](#when-implementation-plans-say-manual-testing)) [CONFIRM: manual testing is no longer an accepted fallback]
+**Tools**: **Playwright** (preferred) or manual testing
 **Coverage Target**: All critical user paths
 
 **Examples**:
