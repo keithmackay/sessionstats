@@ -28,6 +28,7 @@ npm run build
 ```
 
 Tests run with [Vitest](https://vitest.dev/); test files live under `tests/unit/`.
+
 ## Pull Request Process
 
 1. Fork the repository and create a feature branch (`feature/short-description` or `fix/short-description`)
