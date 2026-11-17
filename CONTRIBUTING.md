@@ -28,11 +28,10 @@ npm run build
 ```
 
 Tests run with [Vitest](https://vitest.dev/); test files live under `tests/unit/`.
-
 ## Pull Request Process
 
 1. Fork the repository and create a feature branch (`feature/short-description` or `fix/short-description`)
-2. Write tests for any new functionality
+2. Write tests for any new functionality in `tests/unit/`, one file per module, named after it (e.g. `src/lib/pricing.ts` → `tests/unit/pricing.test.ts`) [CONFIRM: one-test-file-per-module convention, inferred from existing tests]
 3. Ensure `npm test` passes and `npm run build` succeeds
 4. Write clear, focused commit messages describing *why* the change was made
 5. Open a pull request using the [PR template](.github/pull_request_template.md)
